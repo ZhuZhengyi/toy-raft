@@ -4,8 +4,8 @@ import (
 	"github.com/google/uuid"
 )
 
-type MsgType = uint32
 type ReqId = uuid.UUID
+type MsgType uint32
 
 const (
 	MsgHeartbeat MsgType = iota

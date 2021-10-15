@@ -6,7 +6,13 @@ import "testing"
 
 func TestRaftRole(t *testing.T) {
 	role := RoleFollower
-	rn1 := newRaftNode(1, role)
+	logStore := NewMemLogStore()
+	instC := make(chan Instruction, 64)
+	msgC := make(chan Message, 64)
+
+	//logStore.Append()
+
+	rn1 := newRaftNode(1, role, logStore, instC, msgC)
 
 	if rn1.RoleType() != role {
 		t.Errorf("role type error, %v %v", rn1.RoleType(), role)

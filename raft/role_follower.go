@@ -23,6 +23,7 @@ func (c *follower) RoleType() RoleType {
 }
 
 func (f *follower) Step(msg *Message) {
+
 }
 
 func (f *follower) Tick() {

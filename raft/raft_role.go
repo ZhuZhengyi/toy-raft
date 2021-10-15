@@ -35,21 +35,31 @@ type RaftRole interface {
 type raftNode struct {
 	id        uint64
 	term      uint64
-	role      RaftRole
-	log       Log
+	instC     chan Instruction
+	msgC      chan Message
+	logStore  LogStore
 	requests  []Request
 	proxyReqs map[uint64]Request
+	role      RaftRole
 }
 
 var (
 	_ RaftRole = (*raftNode)(nil)
 )
 
-func newRaftNode(id uint64, role RoleType) *raftNode {
+func newRaftNode(id uint64, role RoleType, logStore LogStore,
+	instc chan Instruction,
+	msgC chan Message,
+) *raftNode {
+	_, lastTerm := logStore.LastIndexTerm()
 	node := &raftNode{
 		id:        id,
+		term:      lastTerm,
+		instC:     instc,
+		msgC:      msgC,
 		requests:  make([]Request, 0),
 		proxyReqs: make(map[uint64]Request),
+		logStore:  logStore,
 	}
 
 	switch role {
@@ -68,14 +78,17 @@ func (r *raftNode) RoleType() RoleType {
 	return r.role.RoleType()
 }
 
-func (node *raftNode) becomeRole(roleType RoleType) {
+func (r *raftNode) becomeRole(roleType RoleType) {
+	if r.RoleType() == roleType {
+		return
+	}
 	switch roleType {
 	case RoleCandidate:
-		node.role = NewCandidate(node)
+		r.role = NewCandidate(r)
 	case RoleFollower:
-		node.role = NewFollower(node)
+		r.role = NewFollower(r)
 	case RoleLeader:
-		node.role = NewLeader(node)
+		r.role = NewLeader(r)
 	}
 }
 

@@ -30,4 +30,5 @@ func (l *leader) Step(msg *Message) {
 }
 
 func (l *leader) Tick() {
+	l.heartbeatTicks += 1
 }

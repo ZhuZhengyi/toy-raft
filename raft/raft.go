@@ -2,24 +2,41 @@
 
 package raft
 
+import "time"
+
 type raft struct {
-	id          uint64
-	tickc       chan struct{}
+	id          uint64 // raft id
+	peers       []uint64
 	stopc       chan struct{}
 	clientc     chan Request
 	peerc       chan Message
 	msgc        chan Message
 	node        *raftNode
+	ticker      *time.Ticker
 	reqSessions map[ReqId]Session
 }
 
-func NewRaft(id uint64) *raft {
+func NewRaft(id uint64, peers []uint64) *raft {
 	r := &raft{
 		id:          id,
+		stopc:       make(chan struct{}),
+		clientc:     make(chan Request, 64),
+		msgc:        make(chan Message, 64),
+		peerc:       make(chan Message, 64),
 		node:        newRaftNode(id, RoleFollower),
+		ticker:      time.NewTicker(time.Duration(TickInterval) * time.Millisecond),
 		reqSessions: make(map[ReqId]Session),
 	}
+
 	return r
+}
+
+func (r *raft) Serve() {
+	go r.run()
+}
+
+func (r *raft) Stop() {
+	r.stopc <- struct{}{}
 }
 
 func (r *raft) run() {
@@ -27,7 +44,7 @@ func (r *raft) run() {
 		select {
 		case <-r.stopc:
 			break
-		case <-r.tickc:
+		case <-r.ticker.C:
 			r.node.Tick()
 		case msg := <-r.peerc:
 			r.node.Step(&msg)
@@ -46,7 +63,7 @@ func (r *raft) dispatch(msg Message) {
 		r.peerc <- msg
 	case AddrClient:
 		if msg.Type() == MsgClientResp {
-			r.ReplyToClient(msg.event.(*EventClientResp))
+			r.replyToClient(msg.event.(*EventClientResp))
 		}
 	default:
 	}
@@ -62,7 +79,7 @@ func (r *raft) popReqSession(id ReqId) (s Session) {
 	return
 }
 
-func (r *raft) ReplyToClient(resp *EventClientResp) {
+func (r *raft) replyToClient(resp *EventClientResp) {
 	s := r.popReqSession(resp.id)
 	s.Send(resp.response)
 }

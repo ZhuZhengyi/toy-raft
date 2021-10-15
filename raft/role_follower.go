@@ -18,7 +18,7 @@ func NewFollower(node *raftNode) *follower {
 	return f
 }
 
-func (c *follower) RoleType() RoleType {
+func (f *follower) RoleType() RoleType {
 	return RoleFollower
 }
 

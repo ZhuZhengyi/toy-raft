@@ -37,7 +37,7 @@ type raftNode struct {
 	term      uint64
 	instC     chan Instruction
 	msgC      chan Message
-	logStore  LogStore
+	raftLog   *RaftLog
 	requests  []Request
 	proxyReqs map[uint64]Request
 	role      RaftRole
@@ -51,15 +51,16 @@ func newRaftNode(id uint64, role RoleType, logStore LogStore,
 	instc chan Instruction,
 	msgC chan Message,
 ) *raftNode {
-	_, lastTerm := logStore.LastIndexTerm()
+	raftLog := NewRaftLog(logStore)
+	term, _ := raftLog.LoadTerm()
 	node := &raftNode{
 		id:        id,
-		term:      lastTerm,
+		term:      term,
 		instC:     instc,
 		msgC:      msgC,
 		requests:  make([]Request, 0),
 		proxyReqs: make(map[uint64]Request),
-		logStore:  logStore,
+		raftLog:   raftLog,
 	}
 
 	switch role {
@@ -90,6 +91,31 @@ func (r *raftNode) becomeRole(roleType RoleType) {
 	case RoleLeader:
 		r.role = NewLeader(r)
 	}
+}
+
+func (r *raftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
+
+func (r *raftNode) becomeCandidate() {
+	if r.RoleType() != RoleFollower {
+		return
+	}
+	r.term += 1
+	r.raftLog.SaveTerm(r.term, 0)
+
+	lastIndex, lastTerm := r.raftLog.LastIndexTerm()
+	r.send(AddrPeers, &EventSolicitVoteReq{lastIndex, lastTerm})
+
+	r.becomeRole(RoleCandidate)
+}
+
+func (r *raftNode) send(to Address, event MsgEvent) {
+	msg := Message{
+		from:  AddrLocal,
+		to:    to,
+		term:  r.term,
+		event: event,
+	}
+	r.msgC <- msg
 }
 
 func (r *raftNode) Step(msg *Message) {

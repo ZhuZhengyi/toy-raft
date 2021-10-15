@@ -88,4 +88,5 @@ func (r *raft) getReqMsg(req Request) (msg *Message) {
 	clientReq := NewEventClientReq(req)
 	r.pushReqSession(clientReq.id, req.Session())
 	msg = NewMessage(AddrClient, AddrLocal, 0, clientReq)
+	return
 }

@@ -1,7 +1,7 @@
 package raft
 
 type leader struct {
-	raftNode
+	*raftNode
 	heartbeatTicks uint64
 	peerNextIndex  map[string]uint64
 	peerLastIndex  map[string]uint64
@@ -13,7 +13,7 @@ var (
 
 func NewLeader(node *raftNode) *leader {
 	l := &leader{
-		raftNode:       *node,
+		raftNode:       node,
 		heartbeatTicks: 0,
 		peerNextIndex:  make(map[string]uint64),
 		peerLastIndex:  make(map[string]uint64),

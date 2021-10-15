@@ -1,7 +1,7 @@
 package raft
 
 type follower struct {
-	raftNode
+	*raftNode
 	leader            string
 	votedFor          string
 	leaderSeenTicks   uint64
@@ -10,7 +10,7 @@ type follower struct {
 
 func NewFollower(node *raftNode) *follower {
 	f := &follower{
-		raftNode:          *node,
+		raftNode:          node,
 		leaderSeenTicks:   0,
 		leaderSeenTimeout: 10,
 	}

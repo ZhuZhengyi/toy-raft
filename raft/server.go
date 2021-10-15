@@ -5,9 +5,9 @@ type server struct {
 	raft *raft
 }
 
-func NewServer(id uint64) *server {
+func NewServer(id uint64, peers []uint64) *server {
 	return &server{
-		raft: NewRaft(id),
+		raft: NewRaft(id, peers),
 	}
 }
 

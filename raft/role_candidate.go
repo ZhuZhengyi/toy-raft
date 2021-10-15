@@ -3,7 +3,7 @@
 package raft
 
 type candidate struct {
-	raftNode
+	*raftNode
 	electionTicks   uint64
 	electionTimeout uint64
 	voteCount       uint64
@@ -15,7 +15,7 @@ var (
 
 func NewCandidate(node *raftNode) *candidate {
 	f := &candidate{
-		raftNode:        *node,
+		raftNode:        node,
 		electionTicks:   0,
 		electionTimeout: 10,
 		voteCount:       1,

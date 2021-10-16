@@ -5,9 +5,11 @@ import (
 )
 
 type ReqId = uuid.UUID
-type MsgType uint32
+type MsgType int32
 
 const (
+	MsgUnkown MsgType = -1
+
 	MsgHeartbeat MsgType = iota
 	MsgHeartbeatResp
 	MsgClientReq
@@ -17,49 +19,95 @@ const (
 	MsgAppendEntriesReq
 	MsgAcceptEntriesResp
 	MsgRefuseEntriesResp
-
 	MsgInstallSnapReq
+
+	MsgNameUnkown        = "MsgUnkown"
+	MsgNameHeartbeat     = "MsgHeartbeatReq"
+	MsgNameHeartbeatResp = "MsgHeartbeatResp"
+	MsgNameClientReq     = "MsgClientReq"
+	MsgNameClientResp
+	MsgNameSolictVoteReq
+	MsgNameGrantVoteResp
+	MsgNameAppendEntriesReq
+	MsgNameAcceptEntriesResp
+	MsgNameRefuseEntriesResp
+	MsgNameInstallSnapReq
 )
 
 type MsgEvent interface {
 	Type() MsgType
+	String() string
 }
 
-type EventHeartbeat struct {
+type msgEvent struct {
+}
+
+func (e *msgEvent) Type() MsgType {
+	switch MsgEvent(e).(type) {
+	case *EventHeartbeatReq:
+		return MsgHeartbeat
+	case *EventHeartbeatResp:
+		return MsgHeartbeatResp
+	case *EventSolicitVoteReq:
+		return MsgSolictVoteReq
+	case *EventGrantVoteResp:
+		return MsgGrantVoteResp
+	case *EventAppendEntriesReq:
+		return MsgAppendEntriesReq
+	case *EventClientReq:
+		return MsgClientReq
+	case *EventClientResp:
+		return MsgClientResp
+	}
+
+	return MsgUnkown
+}
+
+func (e *msgEvent) String() string {
+	switch MsgEvent(e).(type) {
+	case *EventHeartbeatReq:
+		return MsgNameHeartbeat
+	case *EventHeartbeatResp:
+		return MsgNameHeartbeatResp
+	case *EventSolicitVoteReq:
+		return MsgNameSolictVoteReq
+	case *EventGrantVoteResp:
+		return MsgNameGrantVoteResp
+	case *EventAppendEntriesReq:
+		return MsgNameAppendEntriesReq
+	case *EventClientReq:
+		return MsgNameClientReq
+	case *EventClientResp:
+		return MsgNameClientResp
+	}
+
+	return MsgNameUnkown
+}
+
+type EventHeartbeatReq struct {
+	msgEvent
 	commitIndex uint64
 	commitTerm  uint64
 }
 
-func (e *EventHeartbeat) Type() MsgType {
-	return MsgHeartbeat
-}
-
 type EventHeartbeatResp struct {
+	msgEvent
 	commitIndex  uint64
 	hasCommitted bool
 }
 
-func (e *EventHeartbeatResp) Type() MsgType {
-	return MsgHeartbeatResp
-}
-
 type EventSolicitVoteReq struct {
+	msgEvent
 	lastIndex uint64
 	lastTerm  uint64
 }
 
-func (e *EventSolicitVoteReq) Type() MsgType {
-	return MsgSolictVoteReq
-}
-
 type EventGrantVoteResp struct {
-}
-
-func (e *EventGrantVoteResp) Type() MsgType {
-	return MsgGrantVoteResp
+	msgEvent
 }
 
 type EventClientReq struct {
+	msgEvent
 	id      ReqId
 	request Request
 }
@@ -72,15 +120,15 @@ func NewEventClientReq(req Request) *EventClientReq {
 	}
 }
 
-func (e *EventClientReq) Type() MsgType {
-	return MsgClientReq
-}
-
 type EventClientResp struct {
+	msgEvent
 	id       ReqId
 	response Response
 }
 
-func (e *EventClientResp) Type() MsgType {
-	return MsgClientResp
+type EventAppendEntriesReq struct {
+	msgEvent
+	baseIndex uint64
+	baseTerm  uint64
+	entries   []Entry
 }

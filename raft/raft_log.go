@@ -97,7 +97,7 @@ func (log *RaftLog) SaveTerm(term uint64, vote uint64) {
 }
 
 // append command to raft log
-func (log *RaftLog) Append(term uint64, command []byte) {
+func (log *RaftLog) Append(term uint64, command []byte) Entry {
 	log.Lock()
 	defer log.Unlock()
 	lastIndex, _ := log.LastIndexTerm()
@@ -110,6 +110,7 @@ func (log *RaftLog) Append(term uint64, command []byte) {
 	}
 	log.entries = append(log.entries, entry)
 
+	return entry
 }
 
 // commit entries which < index

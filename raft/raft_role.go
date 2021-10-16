@@ -39,7 +39,8 @@ type raftNode struct {
 	msgC      chan Message
 	raftLog   *RaftLog
 	requests  []Request
-	proxyReqs map[uint64]Request
+	proxyReqs map[ReqId]Address
+	peers     []uint64
 	role      RaftRole
 }
 
@@ -59,7 +60,7 @@ func newRaftNode(id uint64, role RoleType, logStore LogStore,
 		instC:     instc,
 		msgC:      msgC,
 		requests:  make([]Request, 0),
-		proxyReqs: make(map[uint64]Request),
+		proxyReqs: make(map[ReqId]Address),
 		raftLog:   raftLog,
 	}
 
@@ -95,22 +96,62 @@ func (r *raftNode) becomeRole(roleType RoleType) {
 
 func (r *raftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
 
+//
 func (r *raftNode) becomeCandidate() {
 	if r.RoleType() != RoleFollower {
+		//TODO: warn
 		return
 	}
 	r.term += 1
 	r.raftLog.SaveTerm(r.term, 0)
 
 	lastIndex, lastTerm := r.raftLog.LastIndexTerm()
-	r.send(AddrPeers, &EventSolicitVoteReq{lastIndex, lastTerm})
+	r.send(&AddrPeers{}, &EventSolicitVoteReq{msgEvent{}, lastIndex, lastTerm})
 
 	r.becomeRole(RoleCandidate)
 }
 
+func (r *raftNode) becomeFollower(term, leader uint64) {
+	//
+}
+
+//
+func (r *raftNode) becomeLeader() {
+	if r.RoleType() != RoleCandidate {
+		return
+	}
+
+	heartbeatEvent := &EventHeartbeatReq{}
+	r.send(&AddrPeers{peers: r.peers}, heartbeatEvent)
+
+	r.becomeRole(RoleLeader)
+	//append NOOP event
+
+}
+func (r *raftNode) appendAndCast(command []byte) {
+	entry := r.raftLog.Append(r.term, command)
+
+	for _, p := range r.peers {
+		r.replicate(p, entry)
+	}
+
+}
+
+func (r *raftNode) abortProxyReqs() {
+	for id, addr := range r.proxyReqs {
+		r.send(addr, &EventClientResp{id: id})
+
+	}
+}
+
+func (r *raftNode) replicate(peer uint64, entry Entry) {
+	appendEntriesEvent := &EventAppendEntriesReq{}
+	r.send(&AddrPeer{peer: peer}, appendEntriesEvent)
+}
+
 func (r *raftNode) send(to Address, event MsgEvent) {
 	msg := Message{
-		from:  AddrLocal,
+		from:  new(AddrLocal),
 		to:    to,
 		term:  r.term,
 		event: event,

@@ -63,10 +63,10 @@ func (r *raft) run() {
 }
 
 func (r *raft) dispatch(msg Message) {
-	switch msg.to {
-	case AddrPeer, AddrPeers:
+	switch msg.to.Type() {
+	case AddrTypePeer, AddrTypePeers:
 		r.peerc <- msg
-	case AddrClient:
+	case AddrTypeClient:
 		if msg.Type() == MsgClientResp {
 			r.replyToClient(msg.event.(*EventClientResp))
 		}
@@ -92,6 +92,6 @@ func (r *raft) replyToClient(resp *EventClientResp) {
 func (r *raft) getReqMsg(req Request) (msg *Message) {
 	clientReq := NewEventClientReq(req)
 	r.pushReqSession(clientReq.id, req.Session())
-	msg = NewMessage(AddrClient, AddrLocal, 0, clientReq)
+	msg = NewMessage(&AddrClient{}, &AddrLocal{}, 0, clientReq)
 	return
 }

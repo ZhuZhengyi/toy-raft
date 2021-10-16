@@ -6,7 +6,7 @@ type candidate struct {
 	*raftNode
 	electionTicks   uint64
 	electionTimeout uint64
-	voteCount       uint64
+	votedCount      uint64
 }
 
 var (
@@ -18,7 +18,7 @@ func NewCandidate(node *raftNode) *candidate {
 		raftNode:        node,
 		electionTicks:   0,
 		electionTimeout: 10,
-		voteCount:       1,
+		votedCount:      1,
 	}
 
 	return f

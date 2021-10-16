@@ -31,7 +31,7 @@ func TestRaftRole(t *testing.T) {
 	}
 
 	rn1.Step(&Message{
-		from: AddrClient,
+		from: &AddrClient{},
 	})
 
 }

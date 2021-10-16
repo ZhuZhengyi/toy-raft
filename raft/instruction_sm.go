@@ -11,10 +11,6 @@ type InstStateMachine interface {
 type DummyInstStateMachine struct {
 }
 
-func NewDummyInstStateMachine() *DummyInstStateMachine {
-	return new(DummyInstStateMachine)
-}
-
 func (sm *DummyInstStateMachine) AppliedIndex() (index uint64) {
 	return
 }

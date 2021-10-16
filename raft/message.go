@@ -14,6 +14,6 @@ func NewMessage(from, to Address, term uint64, event MsgEvent) *Message {
 	}
 }
 
-func (m *Message) Type() MsgType {
+func (m *Message) EventType() EventType {
 	return m.event.Type()
 }

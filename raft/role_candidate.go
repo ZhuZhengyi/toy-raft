@@ -42,13 +42,13 @@ func (c *Candidate) Step(msg *Message) {
 	}
 
 	switch msg.event.Type() {
-	case MsgTypeHeartbeatReq:
+	case EventTypeHeartbeatReq:
 		if msg.from.Type() == AddrTypePeer {
 			from := msg.from.(*AddrPeer)
 			c.becomeFollower(msg.term, from.peer).Step(msg)
 			return
 		}
-	case MsgTypeVoteResp:
+	case EventTypeVoteResp:
 		c.votedCount += 1
 		if c.votedCount >= c.quorum() {
 			node := c.becomeLeader()
@@ -61,7 +61,7 @@ func (c *Candidate) Step(msg *Message) {
 				})
 			}
 		}
-	case MsgTypeClientReq:
+	case EventTypeClientReq:
 		c.queuedReqs = append(c.queuedReqs, queuedEvent{msg.from, msg.event})
 	case MsgTypeClientResp:
 		event := msg.event.(*EventClientResp)
@@ -69,7 +69,7 @@ func (c *Candidate) Step(msg *Message) {
 		}
 		delete(c.proxyReqs, event.id)
 		c.send(AddressClient, &EventClientResp{event.id, event.response})
-	case MsgTypeVoteReq:
+	case EventTypeVoteReq:
 	default:
 		//TODO: warn
 	}

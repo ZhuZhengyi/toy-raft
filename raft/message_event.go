@@ -5,24 +5,23 @@ import (
 )
 
 type ReqId = uuid.UUID
-type MsgType int32
+type EventType int32
 
 const (
-	MsgTypeUnkown       MsgType = -1
-	MsgTypeHeartbeatReq MsgType = iota
-	MsgTypeHeartbeatResp
-	MsgTypeClientReq
+	EventTypeHeartbeatReq EventType = iota
+	EventTypeHeartbeatResp
+	EventTypeClientReq
 	MsgTypeClientResp
-	MsgTypeVoteReq
-	MsgTypeVoteResp
-	MsgTypeAppendEntriesReq
-	MsgTypeAcceptEntriesResp
-	MsgTypeRefuseEntriesResp
-	MsgTypeInstallSnapReq
+	EventTypeVoteReq
+	EventTypeVoteResp
+	EventTypeAppendEntriesReq
+	EventTypeAcceptEntriesResp
+	EventTypeRefuseEntriesResp
+	EventTypeInstallSnapReq
 )
 
 type MsgEvent interface {
-	Type() MsgType
+	Type() EventType
 }
 
 var (
@@ -87,38 +86,38 @@ type EventAcceptEntriesResp struct {
 type EventRefuseEntriesResp struct {
 }
 
-func (e *EventHeartbeatReq) Type() MsgType {
-	return MsgTypeHeartbeatReq
+func (e *EventHeartbeatReq) Type() EventType {
+	return EventTypeHeartbeatReq
 }
 
-func (e *EventHeartbeatResp) Type() MsgType {
-	return MsgTypeHeartbeatResp
+func (e *EventHeartbeatResp) Type() EventType {
+	return EventTypeHeartbeatResp
 }
 
-func (e *EventClientReq) Type() MsgType {
-	return MsgTypeClientReq
+func (e *EventClientReq) Type() EventType {
+	return EventTypeClientReq
 }
 
-func (e *EventClientResp) Type() MsgType {
+func (e *EventClientResp) Type() EventType {
 	return MsgTypeClientResp
 }
 
-func (e *EventSolicitVoteReq) Type() MsgType {
-	return MsgTypeVoteReq
+func (e *EventSolicitVoteReq) Type() EventType {
+	return EventTypeVoteReq
 }
 
-func (e *EventGrantVoteResp) Type() MsgType {
-	return MsgTypeVoteResp
+func (e *EventGrantVoteResp) Type() EventType {
+	return EventTypeVoteResp
 }
 
-func (e *EventAppendEntriesReq) Type() MsgType {
-	return MsgTypeAppendEntriesReq
+func (e *EventAppendEntriesReq) Type() EventType {
+	return EventTypeAppendEntriesReq
 }
 
-func (e *EventAcceptEntriesResp) Type() MsgType {
-	return MsgTypeAcceptEntriesResp
+func (e *EventAcceptEntriesResp) Type() EventType {
+	return EventTypeAcceptEntriesResp
 }
 
-func (e *EventRefuseEntriesResp) Type() MsgType {
-	return MsgTypeRefuseEntriesResp
+func (e *EventRefuseEntriesResp) Type() EventType {
+	return EventTypeRefuseEntriesResp
 }

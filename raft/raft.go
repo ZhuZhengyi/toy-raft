@@ -29,11 +29,11 @@ func NewRaft(id uint64, peers []uint64, logStore LogStore, sm InstStateMachine) 
 	r := &raft{
 		id:          id,
 		stopc:       make(chan struct{}),
-		clientc:     make(chan reqSession, 64),
+		clientc:     make(chan reqSession, CLIENT_REQ_BATCH_SIZE),
 		peerc:       make(chan Message, 64),
 		node:        node,
 		smDriver:    NewInstDriver(instC, msgC, sm),
-		ticker:      time.NewTicker(time.Duration(TickInterval) * time.Millisecond),
+		ticker:      time.NewTicker(TICK_INTERVAL_MS),
 		reqSessions: make(map[ReqId]Session),
 	}
 
@@ -72,7 +72,7 @@ func (r *raft) dispatch(msg Message) {
 	case AddrTypePeer, AddrTypePeers:
 		r.peerc <- msg
 	case AddrTypeClient:
-		if msg.Type() == MsgTypeClientResp {
+		if msg.EventType() == MsgTypeClientResp {
 			r.replyToClient(msg.event.(*EventClientResp))
 		}
 	default:

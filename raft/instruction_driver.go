@@ -37,8 +37,10 @@ func (d *InstDriver) notifyApplied(index uint64, result []byte) {
 
 func (d *InstDriver) queryAbort() {
 }
+
 func (d *InstDriver) queryVote() {
 }
+
 func (d *InstDriver) queryExecute() {
 }
 

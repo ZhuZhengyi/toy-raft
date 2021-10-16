@@ -141,7 +141,7 @@ func (r *raftNode) forwardToLeaderQueued(leader Address) {
 		return
 	}
 	for _, queuedEvent := range r.queuedReqs {
-		if queuedEvent.event.Type() == MsgTypeClientReq {
+		if queuedEvent.event.Type() == EventTypeClientReq {
 			originEvent := queuedEvent.event.(*EventClientReq)
 			from := queuedEvent.from
 

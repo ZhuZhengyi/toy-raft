@@ -1,5 +1,7 @@
 package raft
 
+import "fmt"
+
 type queuedEvent struct {
 	from  Address
 	event MsgEvent
@@ -40,7 +42,7 @@ func NewRaftNode(id uint64,
 		term:       term,
 		instC:      instc,
 		msgC:       msgC,
-		queuedReqs: make([]queuedEvent, 4096),
+		queuedReqs: make([]queuedEvent, QUEUED_REQ_BATCH_SIZE),
 		proxyReqs:  make(map[ReqId]Address),
 		log:        raftLog,
 	}
@@ -57,11 +59,17 @@ func NewRaftNode(id uint64,
 	return node
 }
 
+func (r *raftNode) String() string {
+	return fmt.Sprintf("Node(%v) term(%v)", r.id, r.term)
+}
+
 func (r *raftNode) RoleType() RoleType {
 	return r.role.RoleType()
 }
 
 func (r *raftNode) becomeRole(roleType RoleType) {
+	logger.Debug("node(%v) change role %v -> %v\n", r.id, r.RoleType(), roleType)
+
 	if r.RoleType() == roleType {
 		return
 	}
@@ -79,6 +87,7 @@ func (r *raftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
 
 func (r *raftNode) becomeCandidate() {
 	if r.RoleType() != RoleFollower {
+		logger.Error("Node(%v) becomeCandidate \n", r)
 		return
 	}
 	r.term += 1
@@ -91,6 +100,10 @@ func (r *raftNode) becomeCandidate() {
 }
 
 func (r *raftNode) becomeFollower(term, leader uint64) *raftNode {
+	if term < r.term {
+		logger.Error("Node(%v) becomeFollower err, term: %v, leader: %v\n", r, term, leader)
+		return r
+	}
 	r.term = term
 	r.log.SaveTerm(r.term, leader)
 	r.becomeRole(RoleFollower)
@@ -101,6 +114,7 @@ func (r *raftNode) becomeFollower(term, leader uint64) *raftNode {
 
 func (r *raftNode) becomeLeader() *raftNode {
 	if r.RoleType() != RoleCandidate {
+		logger.Warn("becomeLeader Warn  ")
 		return r
 	}
 
@@ -203,6 +217,8 @@ func (r *raftNode) validateMsg(msg *Message) bool {
 	if msg.term < r.term {
 		return false
 	}
+
+	//TODO:
 
 	return true
 }

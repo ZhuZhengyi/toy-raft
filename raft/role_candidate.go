@@ -8,17 +8,17 @@ var (
 
 type Candidate struct {
 	*raftNode
-	electionTicks   uint64
-	electionTimeout uint64
+	electionTicks   int
+	electionTimeout int
 	votedCount      uint64
 }
 
 func NewCandidate(r *raftNode) *Candidate {
 	c := &Candidate{
 		raftNode:        r,
-		electionTicks:   0,
-		electionTimeout: 10,
 		votedCount:      1,
+		electionTicks:   0,
+		electionTimeout: randInt(ELECT_TICK_MIN, ELECT_TICK_MAX),
 	}
 
 	return c

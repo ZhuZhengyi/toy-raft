@@ -3,8 +3,8 @@ package raft
 type leader struct {
 	*raftNode
 	heartbeatTicks uint64
-	peerNextIndex  map[string]uint64
-	peerLastIndex  map[string]uint64
+	peerNextIndex  map[uint64]uint64
+	peerLastIndex  map[uint64]uint64
 }
 
 var (
@@ -12,11 +12,17 @@ var (
 )
 
 func NewLeader(node *raftNode) *leader {
+	lastIndex, _ := node.log.LastIndexTerm()
 	l := &leader{
 		raftNode:       node,
 		heartbeatTicks: 0,
-		peerNextIndex:  make(map[string]uint64),
-		peerLastIndex:  make(map[string]uint64),
+		peerNextIndex:  make(map[uint64]uint64),
+		peerLastIndex:  make(map[uint64]uint64),
+	}
+
+	for _, peer := range node.peers {
+		l.peerNextIndex[peer] = lastIndex + 1
+		l.peerLastIndex[peer] = 0
 	}
 
 	return l

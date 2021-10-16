@@ -32,16 +32,21 @@ type RaftRole interface {
 	Tick()
 }
 
+type queuedEvent struct {
+	from  Address
+	event MsgEvent
+}
+
 type raftNode struct {
-	id        uint64
-	term      uint64
-	instC     chan Instruction
-	msgC      chan Message
-	raftLog   *RaftLog
-	requests  []Request
-	proxyReqs map[ReqId]Address
-	peers     []uint64
-	role      RaftRole
+	id         uint64
+	term       uint64
+	instC      chan Instruction
+	msgC       chan Message
+	log        *RaftLog
+	queuedReqs []queuedEvent
+	proxyReqs  map[ReqId]Address
+	peers      []uint64
+	role       RaftRole
 }
 
 var (
@@ -55,13 +60,13 @@ func newRaftNode(id uint64, role RoleType, logStore LogStore,
 	raftLog := NewRaftLog(logStore)
 	term, _ := raftLog.LoadTerm()
 	node := &raftNode{
-		id:        id,
-		term:      term,
-		instC:     instc,
-		msgC:      msgC,
-		requests:  make([]Request, 0),
-		proxyReqs: make(map[ReqId]Address),
-		raftLog:   raftLog,
+		id:         id,
+		term:       term,
+		instC:      instc,
+		msgC:       msgC,
+		queuedReqs: make([]queuedEvent, 4096),
+		proxyReqs:  make(map[ReqId]Address),
+		log:        raftLog,
 	}
 
 	switch role {
@@ -103,16 +108,20 @@ func (r *raftNode) becomeCandidate() {
 		return
 	}
 	r.term += 1
-	r.raftLog.SaveTerm(r.term, 0)
+	r.log.SaveTerm(r.term, 0)
 
-	lastIndex, lastTerm := r.raftLog.LastIndexTerm()
-	r.send(&AddrPeers{}, &EventSolicitVoteReq{msgEvent{}, lastIndex, lastTerm})
+	lastIndex, lastTerm := r.log.LastIndexTerm()
+	r.send(&AddrPeers{}, &EventSolicitVoteReq{lastIndex, lastTerm})
 
 	r.becomeRole(RoleCandidate)
 }
 
 func (r *raftNode) becomeFollower(term, leader uint64) {
-	//
+	r.term = term
+	r.log.SaveTerm(r.term, leader)
+	r.becomeRole(RoleFollower)
+	r.abortProxyReqs()
+	r.forwardToLeaderQueued(&AddrPeer{leader})
 }
 
 //
@@ -121,15 +130,24 @@ func (r *raftNode) becomeLeader() {
 		return
 	}
 
-	heartbeatEvent := &EventHeartbeatReq{}
+	r.becomeRole(RoleLeader)
+	committedIndex, committedTerm := r.log.CommittedIndexTerm()
+	heartbeatEvent := &EventHeartbeatReq{
+		commitIndex: committedIndex,
+		commitTerm:  committedTerm,
+	}
 	r.send(&AddrPeers{peers: r.peers}, heartbeatEvent)
 
-	r.becomeRole(RoleLeader)
-	//append NOOP event
-
+	r.appendAndCastCommand(NOOPCommand)
+	r.abortProxyReqs()
 }
-func (r *raftNode) appendAndCast(command []byte) {
-	entry := r.raftLog.Append(r.term, command)
+
+var (
+	NOOPCommand = []byte{}
+)
+
+func (r *raftNode) appendAndCastCommand(command []byte) {
+	entry := r.log.Append(r.term, command)
 
 	for _, p := range r.peers {
 		r.replicate(p, entry)
@@ -140,6 +158,35 @@ func (r *raftNode) appendAndCast(command []byte) {
 func (r *raftNode) abortProxyReqs() {
 	for id, addr := range r.proxyReqs {
 		r.send(addr, &EventClientResp{id: id})
+	}
+}
+
+func (r *raftNode) forwardToLeaderQueued(leader Address) {
+	if r.RoleType() == RoleLeader {
+		return
+	}
+	for _, queuedEvent := range r.queuedReqs {
+		if queuedEvent.event.Type() == MsgTypeClientReq {
+			originEvent := queuedEvent.event.(*EventClientReq)
+			from := queuedEvent.from
+
+			// record origin req
+			r.proxyReqs[originEvent.id] = from
+
+			// forward
+			proxyFrom := from
+			if from.Type() == AddrTypeClient {
+				proxyFrom = new(AddrLocal)
+			}
+
+			msg := Message{
+				from:  proxyFrom,
+				to:    leader,
+				term:  0,
+				event: queuedEvent.event,
+			}
+			r.msgC <- msg
+		}
 
 	}
 }
@@ -162,6 +209,12 @@ func (r *raftNode) send(to Address, event MsgEvent) {
 func (r *raftNode) Step(msg *Message) {
 	if !r.validateMsg(msg) {
 		return
+	}
+
+	// msg from peer which term > self
+	if msg.term > r.term && msg.from.Type() == AddrTypePeer {
+		from := msg.from.(*AddrPeer)
+		r.becomeFollower(msg.term, from.peer)
 	}
 
 	r.role.Step(msg)

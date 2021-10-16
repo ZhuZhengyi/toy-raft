@@ -1,103 +1,101 @@
 // request.go
 package raft
 
-type Session interface {
-	Send(Response)
-}
-
-type session struct {
-}
-
-func (s *session) Send(Response) {
-}
-
-type Request interface {
-	Type() ReqType
-	Session() Session
-}
-
-type Response interface {
-	Type() RespType
-}
-
 type (
 	RespType int32
 	ReqType  int32
 )
 
 const (
-	RespTypeUnknown RespType = -1
+	ReqTypeUnknown ReqType = -1
+	ReqTypeQuery   ReqType = iota
+	ReqTypeMutate
+	ReqTypeStatus
 
-	RespTypeStatus RespType = iota
+	RespTypeUnknown RespType = -1
+	RespTypeStatus  RespType = iota
 	RespTypeState
 )
 
-const (
-	ReqTypeUnknown ReqType = -1
+func (r ReqType) String() string {
+	switch r {
+	case ReqTypeQuery:
+		return "ReqQuery"
+	case ReqTypeMutate:
+		return "ReqMutate"
+	case ReqTypeStatus:
+		return "ReqStatus"
+	default:
+		return "ReqUnkown"
+	}
+}
 
-	ReqTypeQuery ReqType = iota
-	ReqTypeMutate
-	ReqTypeStatus
-)
+func (r RespType) String() string {
+	switch r {
+	case RespTypeStatus:
+		return "RespStatus"
+	case RespTypeState:
+		return "RespState"
+	default:
+		return "RespUnkown"
+	}
+}
+
+type Request interface {
+	Type() ReqType
+}
+
+type Response interface {
+	Type() RespType
+}
+
+type Session interface {
+	Send(Response)
+}
 
 var (
-	_ Request = new(request)
+	_ Request = (*ReqQuery)(nil)
+	_ Request = (*ReqMutate)(nil)
+	_ Request = (*ReqStatus)(nil)
+
+	_ Response = (*RespState)(nil)
+	_ Response = (*RespStatus)(nil)
 )
 
-type request struct {
-	session *session
-}
-
-func (r *request) Session() Session {
-	return r.session
-}
-
-func (r *request) Type() ReqType {
-	switch Request(r).(type) {
-	case *ReqQuery:
-		return ReqTypeQuery
-	case *ReqMutate:
-		return ReqTypeMutate
-	case *ReqStatus:
-		return ReqTypeStatus
-	}
-
-	return ReqTypeUnknown
-}
-
 type ReqQuery struct {
-	request
 	query []byte
 }
 
 type ReqMutate struct {
-	request
 	mutate []byte
 }
 
 type ReqStatus struct {
-	request
-}
-
-type response struct {
-}
-
-func (r *response) Type() RespType {
-	switch Response(r).(type) {
-	case *RespStatus:
-		return RespTypeStatus
-	case *RespState:
-		return RespTypeState
-	}
-
-	return RespTypeUnknown
 }
 
 type RespStatus struct {
-	response
 }
 
 type RespState struct {
-	response
 	state []byte
+}
+
+func (r *ReqQuery) Type() ReqType {
+	return ReqTypeQuery
+}
+
+func (r *ReqMutate) Type() ReqType {
+	return ReqTypeMutate
+}
+
+func (r *ReqStatus) Type() ReqType {
+	return ReqTypeStatus
+}
+
+func (r *RespState) Type() RespType {
+	return RespTypeState
+}
+
+func (r *RespStatus) Type() RespType {
+	return RespTypeStatus
 }

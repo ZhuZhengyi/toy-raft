@@ -4,11 +4,16 @@ package raft
 
 import "time"
 
+type reqSession struct {
+	req     Request
+	session Session
+}
+
 type raft struct {
 	id      uint64 // raft id
 	peers   []uint64
 	stopc   chan struct{}
-	clientc chan Request
+	clientc chan reqSession
 	peerc   chan Message
 	//msgc        chan Message
 	node        *raftNode
@@ -24,7 +29,7 @@ func NewRaft(id uint64, peers []uint64, logStore LogStore, sm InstStateMachine) 
 	r := &raft{
 		id:          id,
 		stopc:       make(chan struct{}),
-		clientc:     make(chan Request, 64),
+		clientc:     make(chan reqSession, 64),
 		peerc:       make(chan Message, 64),
 		node:        node,
 		smDriver:    NewInstDriver(instC, msgC, sm),
@@ -53,8 +58,8 @@ func (r *raft) run() {
 			r.node.Tick()
 		case msg := <-r.peerc:
 			r.node.Step(&msg)
-		case req := <-r.clientc:
-			msg := r.getReqMsg(req)
+		case reqSession := <-r.clientc:
+			msg := r.getReqMsg(reqSession.req, reqSession.session)
 			r.node.Step(msg)
 		case msg := <-r.node.msgC:
 			r.dispatch(msg)
@@ -67,7 +72,7 @@ func (r *raft) dispatch(msg Message) {
 	case AddrTypePeer, AddrTypePeers:
 		r.peerc <- msg
 	case AddrTypeClient:
-		if msg.Type() == MsgClientResp {
+		if msg.Type() == MsgTypeClientResp {
 			r.replyToClient(msg.event.(*EventClientResp))
 		}
 	default:
@@ -89,9 +94,9 @@ func (r *raft) replyToClient(resp *EventClientResp) {
 	s.Send(resp.response)
 }
 
-func (r *raft) getReqMsg(req Request) (msg *Message) {
+func (r *raft) getReqMsg(req Request, session Session) (msg *Message) {
 	clientReq := NewEventClientReq(req)
-	r.pushReqSession(clientReq.id, req.Session())
+	r.pushReqSession(clientReq.id, session)
 	msg = NewMessage(&AddrClient{}, &AddrLocal{}, 0, clientReq)
 	return
 }

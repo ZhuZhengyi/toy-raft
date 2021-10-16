@@ -1,6 +1,10 @@
 package raft
 
-type follower struct {
+var (
+	_ RaftNode = (*Follower)(nil)
+)
+
+type Follower struct {
 	*raftNode
 	leader            string
 	votedFor          string
@@ -8,9 +12,9 @@ type follower struct {
 	leaderSeenTimeout uint64
 }
 
-func NewFollower(node *raftNode) *follower {
-	f := &follower{
-		raftNode:          node,
+func NewFollower(r *raftNode) *Follower {
+	f := &Follower{
+		raftNode:          r,
 		leaderSeenTicks:   0,
 		leaderSeenTimeout: 10,
 	}
@@ -18,13 +22,17 @@ func NewFollower(node *raftNode) *follower {
 	return f
 }
 
-func (f *follower) RoleType() RoleType {
+func (f *Follower) RoleType() RoleType {
 	return RoleFollower
 }
 
-func (f *follower) Step(msg *Message) {
+func (f *Follower) Step(msg *Message) {
 
 }
 
-func (f *follower) Tick() {
+func (f *Follower) Tick() {
+	f.leaderSeenTicks += 1
+	if f.leaderSeenTicks >= f.leaderSeenTimeout {
+		f.becomeCandidate()
+	}
 }

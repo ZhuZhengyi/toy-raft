@@ -25,7 +25,7 @@ type raft struct {
 func NewRaft(id uint64, peers []uint64, logStore LogStore, sm InstStateMachine) *raft {
 	instC := make(chan Instruction, 64)
 	msgC := make(chan Message, 64)
-	node := newRaftNode(id, RoleFollower, logStore, instC, msgC)
+	node := NewRaftNode(id, RoleFollower, logStore, instC, msgC)
 	r := &raft{
 		id:          id,
 		stopc:       make(chan struct{}),

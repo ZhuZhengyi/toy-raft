@@ -40,8 +40,13 @@ type AddrPeer struct {
 }
 
 type AddrPeers struct {
-	peers []uint64
 }
+
+var (
+	AddressLocal  = new(AddrLocal)
+	AddressClient = new(AddrClient)
+	AddressPeers  = new(AddrPeers)
+)
 
 func (a *AddrLocal) Type() AddrType {
 	return AddrTypeLocal

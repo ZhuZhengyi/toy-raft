@@ -1,26 +1,28 @@
 package raft
 
-type leader struct {
-	*raftNode
-	heartbeatTicks uint64
-	peerNextIndex  map[uint64]uint64
-	peerLastIndex  map[uint64]uint64
-}
-
 var (
-	_ RaftRole = (*leader)(nil)
+	_ RaftNode = (*Leader)(nil)
 )
 
-func NewLeader(node *raftNode) *leader {
-	lastIndex, _ := node.log.LastIndexTerm()
-	l := &leader{
-		raftNode:       node,
-		heartbeatTicks: 0,
-		peerNextIndex:  make(map[uint64]uint64),
-		peerLastIndex:  make(map[uint64]uint64),
+type Leader struct {
+	*raftNode
+	heartbeatTicks   uint64
+	heartbeatTimeOut uint64
+	peerNextIndex    map[uint64]uint64
+	peerLastIndex    map[uint64]uint64
+}
+
+func NewLeader(r *raftNode) *Leader {
+	lastIndex, _ := r.log.LastIndexTerm()
+	l := &Leader{
+		raftNode:         r,
+		heartbeatTicks:   0,
+		heartbeatTimeOut: 1,
+		peerNextIndex:    make(map[uint64]uint64),
+		peerLastIndex:    make(map[uint64]uint64),
 	}
 
-	for _, peer := range node.peers {
+	for _, peer := range r.peers {
 		l.peerNextIndex[peer] = lastIndex + 1
 		l.peerLastIndex[peer] = 0
 	}
@@ -28,13 +30,21 @@ func NewLeader(node *raftNode) *leader {
 	return l
 }
 
-func (l *leader) RoleType() RoleType {
+func (l *Leader) RoleType() RoleType {
 	return RoleLeader
 }
 
-func (l *leader) Step(msg *Message) {
+func (l *Leader) Step(msg *Message) {
 }
 
-func (l *leader) Tick() {
-	l.heartbeatTicks += 1
+func (l *Leader) Tick() {
+	if len(l.peers) > 0 {
+		l.heartbeatTicks += 1
+		if l.heartbeatTicks >= l.heartbeatTimeOut {
+			l.heartbeatTicks = 0
+
+			commitIndex, commitTerm := l.log.CommittedIndexTerm()
+			l.send(AddressPeers, &EventHeartbeatReq{commitIndex, commitTerm})
+		}
+	}
 }

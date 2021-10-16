@@ -26,6 +26,10 @@ type MsgEvent interface {
 }
 
 var (
+	NOOPCommand = []byte{}
+)
+
+var (
 	_ (MsgEvent) = (*EventHeartbeatReq)(nil)
 	_ (MsgEvent) = (*EventHeartbeatResp)(nil)
 	_ (MsgEvent) = (*EventSolicitVoteReq)(nil)

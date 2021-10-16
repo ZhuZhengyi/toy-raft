@@ -12,7 +12,7 @@ func TestRaftRole(t *testing.T) {
 
 	//logStore.Append()
 
-	rn1 := newRaftNode(1, role, logStore, instC, msgC)
+	rn1 := NewRaftNode(1, role, logStore, instC, msgC)
 
 	if rn1.RoleType() != role {
 		t.Errorf("role type error, %v %v", rn1.RoleType(), role)

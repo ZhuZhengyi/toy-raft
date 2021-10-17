@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 type Logger interface {
@@ -25,6 +26,24 @@ const (
 	LogLevelError
 	LogLevelFatal
 )
+
+func ParseLogLevel(logLevel string) LogLevel {
+	switch strings.ToLower(logLevel) {
+	case "debug":
+		return LogLevelDebug
+	case "info":
+		return LogLevelInfo
+	case "warn":
+		return LogLevelWarn
+	case "error":
+		return LogLevelError
+	case "fatal":
+		return LogLevelFatal
+	default:
+		fmt.Fprintf(os.Stdout, "Parse log level err, unkown level(%v), set LogLevel with %v\n", logLevel, LogLevelInfo)
+		return LogLevelInfo
+	}
+}
 
 var (
 	stdLogger = NewStdLogger(LogLevelInfo)

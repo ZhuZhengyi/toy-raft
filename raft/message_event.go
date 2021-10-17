@@ -4,20 +4,22 @@ import (
 	"github.com/google/uuid"
 )
 
+//go:generate stringer -type=EventType  -linecomment
+
 type ReqId = uuid.UUID
 type EventType int32
 
 const (
-	EventTypeHeartbeatReq EventType = iota
-	EventTypeHeartbeatResp
-	EventTypeClientReq
-	MsgTypeClientResp
-	EventTypeVoteReq
-	EventTypeVoteResp
-	EventTypeAppendEntriesReq
-	EventTypeAcceptEntriesResp
-	EventTypeRefuseEntriesResp
-	EventTypeInstallSnapReq
+	EventTypeHeartbeatReq      EventType = iota // HeartbeatReq
+	EventTypeHeartbeatResp                      // HeartbeatResponse
+	EventTypeClientReq                          // ClientReq
+	EventTypeClientResp                         // ClientResponse
+	EventTypeVoteReq                            // VoteReq
+	EventTypeVoteResp                           // VoteResponse
+	EventTypeAppendEntriesReq                   // AppendEntriesReq
+	EventTypeAcceptEntriesResp                  // AcceptEntriesResponse
+	EventTypeRefuseEntriesResp                  // RefuseEntriesResponse
+	EventTypeInstallSnapReq                     // InstallSnapshot
 )
 
 type MsgEvent interface {
@@ -104,7 +106,7 @@ func (e *EventClientReq) Type() EventType {
 }
 
 func (e *EventClientResp) Type() EventType {
-	return MsgTypeClientResp
+	return EventTypeClientResp
 }
 
 func (e *EventSolicitVoteReq) Type() EventType {

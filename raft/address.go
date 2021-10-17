@@ -1,32 +1,22 @@
 package raft
 
+import "fmt"
+
+//go:generate stringer -type=AddrType  -linecomment
+
 type AddrType int32
 
 const (
-	AddrTypeUnkown AddrType = -1
-	AddrTypeLocal  AddrType = iota
-	AddrTypeClient
-	AddrTypePeer
-	AddrTypePeers
+	AddrTypeUnkown AddrType = -1   // AddrUnkown
+	AddrTypeLocal  AddrType = iota // AddrLocal
+	AddrTypeClient                 // AddrClient
+	AddrTypePeer                   // AddrPeer
+	AddrTypePeers                  // AddrPeers
 )
-
-func (a AddrType) String() string {
-	switch a {
-	case AddrTypeLocal:
-		return "AddrLocal"
-	case AddrTypeClient:
-		return "AddrClient"
-	case AddrTypePeer:
-		return "AddrPeer"
-	case AddrTypePeers:
-		return "AddrPeers"
-	default:
-		return "AddrUnkown"
-	}
-}
 
 type Address interface {
 	Type() AddrType
+	String() string
 }
 
 type AddrLocal struct {
@@ -40,6 +30,7 @@ type AddrPeer struct {
 }
 
 type AddrPeers struct {
+	peers []uint64
 }
 
 var (
@@ -52,14 +43,30 @@ func (a *AddrLocal) Type() AddrType {
 	return AddrTypeLocal
 }
 
+func (a *AddrLocal) String() string {
+	return a.Type().String()
+}
+
 func (a *AddrClient) Type() AddrType {
 	return AddrTypeClient
+}
+
+func (a *AddrClient) String() string {
+	return a.Type().String()
 }
 
 func (a *AddrPeer) Type() AddrType {
 	return AddrTypePeer
 }
 
+func (a *AddrPeer) String() string {
+	return fmt.Sprintf("%v(%v)", a.Type().String(), a.peer)
+}
+
 func (a *AddrPeers) Type() AddrType {
 	return AddrTypePeers
+}
+
+func (a *AddrPeers) String() string {
+	return fmt.Sprintf("%v(%v)", a.Type().String(), a.peers)
 }

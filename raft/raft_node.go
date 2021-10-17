@@ -44,108 +44,110 @@ func NewRaftNode(id uint64,
 	return node
 }
 
-func (r *RaftNode) String() string {
-	return fmt.Sprintf("Node(%v) term(%v)", r.id, r.term)
+func (node *RaftNode) String() string {
+	return fmt.Sprintf("Node(%v) term(%v) role(%v)", node.id, node.term, node.RoleType())
 }
 
-func (r *RaftNode) RoleType() RoleType {
-	return r.role.Type()
+func (node *RaftNode) RoleType() RoleType {
+	return node.role.Type()
 }
 
-func (r *RaftNode) becomeRole(roleType RoleType) {
-	logger.Debug("node(%v) change role %v -> %v\n", r.id, r.role.Type(), roleType)
-
-	if r.RoleType() == roleType {
+func (node *RaftNode) becomeRole(roleType RoleType) {
+	if node.RoleType() == roleType {
 		return
 	}
+
+	logger.Debug("node(%v) become role %v\n", node, roleType)
+
 	switch roleType {
 	case RoleCandidate:
-		r.role = NewCandidate(r)
+		node.role = NewCandidate(node)
 	case RoleFollower:
-		r.role = NewFollower(r)
+		node.role = NewFollower(node)
 	case RoleLeader:
-		r.role = NewLeader(r)
+		node.role = NewLeader(node)
 	}
+
 }
 
-func (r *RaftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
+func (node *RaftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
 
-func (r *RaftNode) becomeCandidate() {
-	if r.RoleType() != RoleFollower {
-		logger.Error("Node(%v) becomeCandidate \n", r)
+func (node *RaftNode) becomeCandidate() {
+	if node.RoleType() != RoleFollower {
+		logger.Error("Node(%v) becomeCandidate \n", node)
 		return
 	}
-	r.term += 1
-	r.log.SaveTerm(r.term, 0)
+	node.term += 1
+	node.log.SaveTerm(node.term, 0)
 
-	lastIndex, lastTerm := r.log.LastIndexTerm()
-	r.send(&AddrPeers{}, &EventSolicitVoteReq{lastIndex, lastTerm})
+	lastIndex, lastTerm := node.log.LastIndexTerm()
+	node.send(&AddrPeers{}, &EventSolicitVoteReq{lastIndex, lastTerm})
 
-	r.becomeRole(RoleCandidate)
+	node.becomeRole(RoleCandidate)
 }
 
-func (r *RaftNode) becomeFollower(term, leader uint64) *RaftNode {
-	if term < r.term {
-		logger.Error("Node(%v) becomeFollower err, term: %v, leader: %v\n", r, term, leader)
-		return r
+func (node *RaftNode) becomeFollower(term, leader uint64) *RaftNode {
+	if term < node.term {
+		logger.Error("Node(%v) becomeFollower err, term: %v, leader: %v\n", node, term, leader)
+		return node
 	}
-	r.term = term
-	r.log.SaveTerm(r.term, leader)
-	r.becomeRole(RoleFollower)
-	r.abortProxyReqs()
-	r.forwardToLeaderQueued(&AddrPeer{leader})
-	return r
+	node.term = term
+	node.log.SaveTerm(node.term, leader)
+	node.becomeRole(RoleFollower)
+	node.abortProxyReqs()
+	node.forwardToLeaderQueued(&AddrPeer{leader})
+	return node
 }
 
-func (r *RaftNode) becomeLeader() *RaftNode {
-	if r.RoleType() != RoleCandidate {
+func (node *RaftNode) becomeLeader() *RaftNode {
+	if node.RoleType() != RoleCandidate {
 		logger.Warn("becomeLeader Warn  ")
-		return r
+		return node
 	}
 
-	r.becomeRole(RoleLeader)
-	committedIndex, committedTerm := r.log.CommittedIndexTerm()
+	node.becomeRole(RoleLeader)
+	committedIndex, committedTerm := node.log.CommittedIndexTerm()
 	heartbeatEvent := &EventHeartbeatReq{
 		commitIndex: committedIndex,
 		commitTerm:  committedTerm,
 	}
-	r.send(AddressPeers, heartbeatEvent)
+	node.send(AddressPeers, heartbeatEvent)
 
-	r.appendAndCastCommand(NOOPCommand)
-	r.abortProxyReqs()
+	node.appendAndCastCommand(NOOPCommand)
+	node.abortProxyReqs()
 
-	return r
+	return node
 }
 
-func (r *RaftNode) appendAndCastCommand(command []byte) {
-	entry := r.log.Append(r.term, command)
+func (node *RaftNode) appendAndCastCommand(command []byte) {
+	entry := node.log.Append(node.term, command)
 
-	for _, p := range r.peers {
-		r.replicate(p, entry)
+	for _, p := range node.peers {
+		node.replicate(p, entry)
 	}
 }
 
-func (r *RaftNode) quorum() uint64 {
-	return (uint64(len(r.peers))+1)/2 + 1
+func (node *RaftNode) quorum() uint64 {
+	return (uint64(len(node.peers))+1)/2 + 1
 }
 
-func (r *RaftNode) abortProxyReqs() {
-	for id, addr := range r.proxyReqs {
-		r.send(addr, &EventClientResp{id: id})
+func (node *RaftNode) abortProxyReqs() {
+	for id, addr := range node.proxyReqs {
+		node.send(addr, &EventClientResp{id: id})
 	}
 }
 
-func (r *RaftNode) forwardToLeaderQueued(leader Address) {
-	if r.RoleType() == RoleLeader {
+func (node *RaftNode) forwardToLeaderQueued(leader Address) {
+	if node.RoleType() == RoleLeader {
 		return
 	}
-	for _, queuedEvent := range r.queuedReqs {
+	for _, queuedEvent := range node.queuedReqs {
 		if queuedEvent.event.Type() == EventTypeClientReq {
 			originEvent := queuedEvent.event.(*EventClientReq)
 			from := queuedEvent.from
 
 			// record origin req
-			r.proxyReqs[originEvent.id] = from
+			node.proxyReqs[originEvent.id] = from
 
 			// forward
 			proxyFrom := from
@@ -159,47 +161,48 @@ func (r *RaftNode) forwardToLeaderQueued(leader Address) {
 				term:  0,
 				event: queuedEvent.event,
 			}
-			r.msgC <- msg
+			node.msgC <- msg
 		}
 
 	}
 }
 
-func (r *RaftNode) replicate(peer uint64, entry Entry) {
+func (node *RaftNode) replicate(peer uint64, entry Entry) {
 	appendEntriesEvent := &EventAppendEntriesReq{}
-	r.send(&AddrPeer{peer: peer}, appendEntriesEvent)
+	node.send(&AddrPeer{peer: peer}, appendEntriesEvent)
 }
 
-func (r *RaftNode) send(to Address, event MsgEvent) {
+func (node *RaftNode) send(to Address, event MsgEvent) {
 	msg := Message{
 		from:  new(AddrLocal),
 		to:    to,
-		term:  r.term,
+		term:  node.term,
 		event: event,
 	}
-	r.msgC <- msg
+	node.msgC <- msg
 }
 
-func (r *RaftNode) Step(msg *Message) {
-	if !r.validateMsg(msg) {
+func (node *RaftNode) Step(msg *Message) {
+	if !node.validateMsg(msg) {
+		logger.Warn("Node(%v) recieve invalid msg: %v", node, msg)
 		return
 	}
 
 	// msg from peer which term > self
-	if msg.term > r.term && msg.from.Type() == AddrTypePeer {
+	if msg.term > node.term && msg.from.Type() == AddrTypePeer {
 		from := msg.from.(*AddrPeer)
-		r.becomeFollower(msg.term, from.peer)
+		node.becomeFollower(msg.term, from.peer)
 	}
 
-	r.role.Step(msg)
+	node.role.Step(msg)
 }
 
-func (r *RaftNode) Tick() {
-	r.role.Tick()
+func (node *RaftNode) Tick() {
+	node.role.Tick()
 }
 
-func (r *RaftNode) validateMsg(msg *Message) bool {
-	if msg.term < r.term {
+func (node *RaftNode) validateMsg(msg *Message) bool {
+	if msg.term < node.term {
 		return false
 	}
 

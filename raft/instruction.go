@@ -1,6 +1,8 @@
 //
 package raft
 
+//go:generate stringer -type=InstType
+
 type InstType int16
 
 const (

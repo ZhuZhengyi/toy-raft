@@ -63,7 +63,7 @@ func (c *Candidate) Step(msg *Message) {
 		}
 	case EventTypeClientReq:
 		c.queuedReqs = append(c.queuedReqs, queuedEvent{msg.from, msg.event})
-	case MsgTypeClientResp:
+	case EventTypeClientResp:
 		event := msg.event.(*EventClientResp)
 		if event.response.Type() == RespTypeStatus {
 		}
@@ -71,6 +71,7 @@ func (c *Candidate) Step(msg *Message) {
 		c.send(AddressClient, &EventClientResp{event.id, event.response})
 	case EventTypeVoteReq:
 	default:
+		logger.Warn("RaftRole(%v) reciev error msg: (%v)\n", c, msg)
 		//TODO: warn
 	}
 }

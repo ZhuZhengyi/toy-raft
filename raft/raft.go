@@ -71,7 +71,7 @@ func (r *raft) dispatch(msg Message) {
 	case AddrTypePeer, AddrTypePeers:
 		r.peerc <- msg
 	case AddrTypeClient:
-		if msg.EventType() == MsgTypeClientResp {
+		if msg.EventType() == EventTypeClientResp {
 			r.replyToClient(msg.event.(*EventClientResp))
 		}
 	default:

@@ -3,12 +3,15 @@
 #
 #
 
+BUILD_TARGETS := build/toy-raft
+
 PHONY := all
 all: test build
 	@echo "make all done"
 
 PHONY += build
-build:
+build: $(BUILD_TARGETS)
+	@go generate ./...
 	@go build -o build/toy-raft
 
 PHONY += clear

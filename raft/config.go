@@ -2,15 +2,22 @@
 
 package raft
 
-import "time"
+type Config struct {
+	ServerListenPort int    `json:"ListenPort" yaml:"ListenPort"`   //
+	PeerTcpPort      int    `json:"PeerTcpPort" yaml:"PeerTcpPort"` //
+	LogFilePath      string `json:"LogFilePath" yaml:"LogFilePath"` //
+	LogLevel         string `json:"LogLevel" yaml:"LogLevel"`       //
+}
 
-const (
-	TICK_INTERVAL         = 10
-	TICK_INTERVAL_MS      = time.Duration(TICK_INTERVAL) * time.Millisecond
-	HB_TICK_MIN           = 8
-	HB_TICK_MAX           = 15
-	ELECT_TICK_MIN        = 8
-	ELECT_TICK_MAX        = 15
-	CLIENT_REQ_BATCH_SIZE = 4096
-	QUEUED_REQ_BATCH_SIZE = 4096
-)
+func DefaultConfig() *Config {
+	return &Config{
+		ServerListenPort: CONF_DEF_LISTEN_PORT,
+		PeerTcpPort:      CONF_DEF_PEER_TCP_PORT,
+	}
+}
+
+func ParseConfig(configPath string) *Config {
+	config := DefaultConfig()
+
+	return config
+}

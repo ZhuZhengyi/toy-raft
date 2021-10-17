@@ -1,28 +1,24 @@
 package raft
 
-var (
-	_ RaftNode = (*Leader)(nil)
-)
-
 type Leader struct {
-	*raftNode
+	*RaftNode
 	heartbeatTicks   uint64
 	heartbeatTimeOut uint64
 	peerNextIndex    map[uint64]uint64
 	peerLastIndex    map[uint64]uint64
 }
 
-func NewLeader(r *raftNode) *Leader {
-	lastIndex, _ := r.log.LastIndexTerm()
+func NewLeader(node *RaftNode) *Leader {
+	lastIndex, _ := node.log.LastIndexTerm()
 	l := &Leader{
-		raftNode:         r,
+		RaftNode:         node,
 		heartbeatTicks:   0,
 		heartbeatTimeOut: 1,
 		peerNextIndex:    make(map[uint64]uint64),
 		peerLastIndex:    make(map[uint64]uint64),
 	}
 
-	for _, peer := range r.peers {
+	for _, peer := range node.peers {
 		l.peerNextIndex[peer] = lastIndex + 1
 		l.peerLastIndex[peer] = 0
 	}
@@ -30,7 +26,11 @@ func NewLeader(r *raftNode) *Leader {
 	return l
 }
 
-func (l *Leader) RoleType() RoleType {
+var (
+	_ RaftRole = (*Leader)(nil)
+)
+
+func (l *Leader) Type() RoleType {
 	return RoleLeader
 }
 

@@ -1,6 +1,12 @@
 // raft_role.go
 package raft
 
+type RaftRole interface {
+	Type() RoleType
+	Step(msg *Message)
+	Tick()
+}
+
 type RoleType int8
 
 const (

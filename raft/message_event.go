@@ -24,6 +24,11 @@ type MsgEvent interface {
 	Type() EventType
 }
 
+type queuedEvent struct {
+	from  Address
+	event MsgEvent
+}
+
 var (
 	NOOPCommand = []byte{}
 )

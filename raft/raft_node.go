@@ -2,22 +2,7 @@ package raft
 
 import "fmt"
 
-type queuedEvent struct {
-	from  Address
-	event MsgEvent
-}
-
-type RaftNode interface {
-	RoleType() RoleType
-	Step(msg *Message)
-	Tick()
-}
-
-var (
-	_ RaftNode = (*raftNode)(nil)
-)
-
-type raftNode struct {
+type RaftNode struct {
 	id         uint64
 	term       uint64
 	instC      chan Instruction
@@ -26,7 +11,7 @@ type raftNode struct {
 	queuedReqs []queuedEvent
 	proxyReqs  map[ReqId]Address
 	peers      []uint64
-	role       RaftNode
+	role       RaftRole
 }
 
 func NewRaftNode(id uint64,
@@ -34,10 +19,10 @@ func NewRaftNode(id uint64,
 	logStore LogStore,
 	instc chan Instruction,
 	msgC chan Message,
-) *raftNode {
+) *RaftNode {
 	raftLog := NewRaftLog(logStore)
 	term, _ := raftLog.LoadTerm()
-	node := &raftNode{
+	node := &RaftNode{
 		id:         id,
 		term:       term,
 		instC:      instc,
@@ -59,16 +44,16 @@ func NewRaftNode(id uint64,
 	return node
 }
 
-func (r *raftNode) String() string {
+func (r *RaftNode) String() string {
 	return fmt.Sprintf("Node(%v) term(%v)", r.id, r.term)
 }
 
-func (r *raftNode) RoleType() RoleType {
-	return r.role.RoleType()
+func (r *RaftNode) RoleType() RoleType {
+	return r.role.Type()
 }
 
-func (r *raftNode) becomeRole(roleType RoleType) {
-	logger.Debug("node(%v) change role %v -> %v\n", r.id, r.RoleType(), roleType)
+func (r *RaftNode) becomeRole(roleType RoleType) {
+	logger.Debug("node(%v) change role %v -> %v\n", r.id, r.role.Type(), roleType)
 
 	if r.RoleType() == roleType {
 		return
@@ -83,9 +68,9 @@ func (r *raftNode) becomeRole(roleType RoleType) {
 	}
 }
 
-func (r *raftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
+func (r *RaftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
 
-func (r *raftNode) becomeCandidate() {
+func (r *RaftNode) becomeCandidate() {
 	if r.RoleType() != RoleFollower {
 		logger.Error("Node(%v) becomeCandidate \n", r)
 		return
@@ -99,7 +84,7 @@ func (r *raftNode) becomeCandidate() {
 	r.becomeRole(RoleCandidate)
 }
 
-func (r *raftNode) becomeFollower(term, leader uint64) *raftNode {
+func (r *RaftNode) becomeFollower(term, leader uint64) *RaftNode {
 	if term < r.term {
 		logger.Error("Node(%v) becomeFollower err, term: %v, leader: %v\n", r, term, leader)
 		return r
@@ -112,7 +97,7 @@ func (r *raftNode) becomeFollower(term, leader uint64) *raftNode {
 	return r
 }
 
-func (r *raftNode) becomeLeader() *raftNode {
+func (r *RaftNode) becomeLeader() *RaftNode {
 	if r.RoleType() != RoleCandidate {
 		logger.Warn("becomeLeader Warn  ")
 		return r
@@ -132,7 +117,7 @@ func (r *raftNode) becomeLeader() *raftNode {
 	return r
 }
 
-func (r *raftNode) appendAndCastCommand(command []byte) {
+func (r *RaftNode) appendAndCastCommand(command []byte) {
 	entry := r.log.Append(r.term, command)
 
 	for _, p := range r.peers {
@@ -140,17 +125,17 @@ func (r *raftNode) appendAndCastCommand(command []byte) {
 	}
 }
 
-func (r *raftNode) quorum() uint64 {
+func (r *RaftNode) quorum() uint64 {
 	return (uint64(len(r.peers))+1)/2 + 1
 }
 
-func (r *raftNode) abortProxyReqs() {
+func (r *RaftNode) abortProxyReqs() {
 	for id, addr := range r.proxyReqs {
 		r.send(addr, &EventClientResp{id: id})
 	}
 }
 
-func (r *raftNode) forwardToLeaderQueued(leader Address) {
+func (r *RaftNode) forwardToLeaderQueued(leader Address) {
 	if r.RoleType() == RoleLeader {
 		return
 	}
@@ -180,12 +165,12 @@ func (r *raftNode) forwardToLeaderQueued(leader Address) {
 	}
 }
 
-func (r *raftNode) replicate(peer uint64, entry Entry) {
+func (r *RaftNode) replicate(peer uint64, entry Entry) {
 	appendEntriesEvent := &EventAppendEntriesReq{}
 	r.send(&AddrPeer{peer: peer}, appendEntriesEvent)
 }
 
-func (r *raftNode) send(to Address, event MsgEvent) {
+func (r *RaftNode) send(to Address, event MsgEvent) {
 	msg := Message{
 		from:  new(AddrLocal),
 		to:    to,
@@ -195,7 +180,7 @@ func (r *raftNode) send(to Address, event MsgEvent) {
 	r.msgC <- msg
 }
 
-func (r *raftNode) Step(msg *Message) {
+func (r *RaftNode) Step(msg *Message) {
 	if !r.validateMsg(msg) {
 		return
 	}
@@ -209,11 +194,11 @@ func (r *raftNode) Step(msg *Message) {
 	r.role.Step(msg)
 }
 
-func (r *raftNode) Tick() {
+func (r *RaftNode) Tick() {
 	r.role.Tick()
 }
 
-func (r *raftNode) validateMsg(msg *Message) bool {
+func (r *RaftNode) validateMsg(msg *Message) bool {
 	if msg.term < r.term {
 		return false
 	}

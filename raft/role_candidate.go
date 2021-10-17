@@ -2,20 +2,16 @@
 
 package raft
 
-var (
-	_ RaftNode = (*Candidate)(nil)
-)
-
 type Candidate struct {
-	*raftNode
+	*RaftNode
 	electionTicks   int
 	electionTimeout int
 	votedCount      uint64
 }
 
-func NewCandidate(r *raftNode) *Candidate {
+func NewCandidate(node *RaftNode) *Candidate {
 	c := &Candidate{
-		raftNode:        r,
+		RaftNode:        node,
 		votedCount:      1,
 		electionTicks:   0,
 		electionTimeout: randInt(ELECT_TICK_MIN, ELECT_TICK_MAX),
@@ -24,7 +20,11 @@ func NewCandidate(r *raftNode) *Candidate {
 	return c
 }
 
-func (c *Candidate) RoleType() RoleType {
+var (
+	_ RaftRole = (*Candidate)(nil)
+)
+
+func (c *Candidate) Type() RoleType {
 	return RoleCandidate
 }
 

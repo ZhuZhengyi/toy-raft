@@ -10,13 +10,12 @@ type reqSession struct {
 }
 
 type raft struct {
-	id      uint64 // raft id
-	peers   []uint64
-	stopc   chan struct{}
-	clientc chan reqSession
-	peerc   chan Message
-	//msgc        chan Message
-	node        *raftNode
+	id          uint64 // raft id
+	peers       []uint64
+	stopc       chan struct{}
+	clientc     chan reqSession
+	peerc       chan Message
+	node        *RaftNode
 	ticker      *time.Ticker
 	smDriver    *InstDriver
 	reqSessions map[ReqId]Session

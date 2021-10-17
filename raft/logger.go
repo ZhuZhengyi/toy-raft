@@ -3,6 +3,7 @@
 package raft
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
@@ -12,39 +13,84 @@ type Logger interface {
 	Info(format string, v ...interface{})
 	Warn(format string, v ...interface{})
 	Error(format string, v ...interface{})
+	SetLogLevel(logLevel LogLevel)
 }
 
+type LogLevel int
+
+const (
+	LogLevelDebug LogLevel = iota
+	LogLevelInfo
+	LogLevelWarn
+	LogLevelError
+	LogLevelFatal
+)
+
 var (
-	logger = NewStdLogger()
+	stdLogger = NewStdLogger(LogLevelInfo)
+)
+
+var (
+	_ (Logger) = (*StdLogger)(nil)
 )
 
 type StdLogger struct {
-	info   *log.Logger
-	warn   *log.Logger
-	errorl *log.Logger
-	debug  *log.Logger
+	logLevel LogLevel
+	info     *log.Logger
+	debug    *log.Logger
+	warn     *log.Logger
+	errorl   *log.Logger
+	fatal    *log.Logger
 }
 
-func NewStdLogger() *StdLogger {
+func NewStdLogger(logLevel LogLevel) *StdLogger {
 	return &StdLogger{
-		info:   log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
-		warn:   log.New(os.Stdout, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile),
-		errorl: log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
-		debug:  log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile),
+		logLevel: logLevel,
+		debug:    log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile),
+		info:     log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
+		warn:     log.New(os.Stdout, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile),
+		errorl:   log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
+		fatal:    log.New(os.Stderr, "FATAL: ", log.Ldate|log.Ltime|log.Lshortfile),
 	}
 }
 
+func (l *StdLogger) SetLogLevel(logLevel LogLevel) {
+	l.logLevel = logLevel
+}
+
 func (l *StdLogger) Info(format string, v ...interface{}) {
+	if l.logLevel > LogLevelInfo {
+		return
+	}
+	l.info.Printf(format, v...)
+}
+
+func (l *StdLogger) Debug(format string, v ...interface{}) {
+	if l.logLevel > LogLevelDebug {
+		return
+	}
 	l.debug.Printf(format, v...)
 }
 
 func (l *StdLogger) Warn(format string, v ...interface{}) {
-	l.debug.Printf(format, v...)
-}
-func (l *StdLogger) Error(format string, v ...interface{}) {
-	l.debug.Printf(format, v...)
+	if l.logLevel > LogLevelWarn {
+		return
+	}
+	l.warn.Printf(format, v...)
 }
 
-func (l *StdLogger) Debug(format string, v ...interface{}) {
-	l.debug.Printf(format, v...)
+func (l *StdLogger) Error(format string, v ...interface{}) {
+	if l.logLevel > LogLevelError {
+		return
+	}
+	l.errorl.Printf(format, v...)
+}
+
+func (l *StdLogger) Fatal(format string, v ...interface{}) {
+	if l.logLevel > LogLevelFatal {
+		return
+	}
+	l.fatal.Printf(format, v...)
+
+	panic(fmt.Sprintf(format, v...))
 }

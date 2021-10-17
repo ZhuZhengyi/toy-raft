@@ -5,6 +5,10 @@ type server struct {
 	raft *raft
 }
 
+var (
+	logger = stdLogger
+)
+
 func NewServer(id uint64, peers []uint64, logStore LogStore, sm InstStateMachine) *server {
 	return &server{
 		raft: NewRaft(id, peers, logStore, sm),

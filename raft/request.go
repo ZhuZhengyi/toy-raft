@@ -1,45 +1,21 @@
 // request.go
 package raft
 
+//go:generate stringer -type=ReqType,RespType  -linecomment
+
 type (
 	RespType int32
 	ReqType  int32
 )
 
 const (
-	ReqTypeUnknown ReqType = -1
-	ReqTypeQuery   ReqType = iota
-	ReqTypeMutate
-	ReqTypeStatus
+	ReqTypeQuery  ReqType = iota // ReqQuery
+	ReqTypeMutate                // ReqMutate
+	ReqTypeStatus                // ReqStatus
 
-	RespTypeUnknown RespType = -1
-	RespTypeStatus  RespType = iota
-	RespTypeState
+	RespTypeStatus RespType = iota // RespStatus
+	RespTypeState                  // RespState
 )
-
-func (r ReqType) String() string {
-	switch r {
-	case ReqTypeQuery:
-		return "ReqQuery"
-	case ReqTypeMutate:
-		return "ReqMutate"
-	case ReqTypeStatus:
-		return "ReqStatus"
-	default:
-		return "ReqUnkown"
-	}
-}
-
-func (r RespType) String() string {
-	switch r {
-	case RespTypeStatus:
-		return "RespStatus"
-	case RespTypeState:
-		return "RespState"
-	default:
-		return "RespUnkown"
-	}
-}
 
 type Request interface {
 	Type() ReqType
@@ -78,24 +54,4 @@ type RespStatus struct {
 
 type RespState struct {
 	state []byte
-}
-
-func (r *ReqQuery) Type() ReqType {
-	return ReqTypeQuery
-}
-
-func (r *ReqMutate) Type() ReqType {
-	return ReqTypeMutate
-}
-
-func (r *ReqStatus) Type() ReqType {
-	return ReqTypeStatus
-}
-
-func (r *RespState) Type() RespType {
-	return RespTypeState
-}
-
-func (r *RespStatus) Type() RespType {
-	return RespTypeStatus
 }

@@ -7,7 +7,6 @@ import "fmt"
 type AddrType int32
 
 const (
-	AddrTypeUnkown AddrType = -1   // AddrUnkown
 	AddrTypeLocal  AddrType = iota // AddrLocal
 	AddrTypeClient                 // AddrClient
 	AddrTypePeer                   // AddrPeer
@@ -39,32 +38,16 @@ var (
 	AddressPeers  = new(AddrPeers)
 )
 
-func (a *AddrLocal) Type() AddrType {
-	return AddrTypeLocal
-}
-
 func (a *AddrLocal) String() string {
 	return a.Type().String()
-}
-
-func (a *AddrClient) Type() AddrType {
-	return AddrTypeClient
 }
 
 func (a *AddrClient) String() string {
 	return a.Type().String()
 }
 
-func (a *AddrPeer) Type() AddrType {
-	return AddrTypePeer
-}
-
 func (a *AddrPeer) String() string {
 	return fmt.Sprintf("%v(%v)", a.Type().String(), a.peer)
-}
-
-func (a *AddrPeers) Type() AddrType {
-	return AddrTypePeers
 }
 
 func (a *AddrPeers) String() string {

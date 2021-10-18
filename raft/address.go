@@ -25,11 +25,11 @@ type AddrClient struct {
 }
 
 type AddrPeer struct {
-	peer uint64
+	peer string
 }
 
 type AddrPeers struct {
-	peers []uint64
+	peers []string
 }
 
 var (

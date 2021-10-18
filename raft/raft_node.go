@@ -86,7 +86,7 @@ func (node *RaftNode) becomeCandidate() {
 	node.becomeRole(RoleCandidate)
 }
 
-func (node *RaftNode) becomeFollower(term, leader uint64) *RaftNode {
+func (node *RaftNode) becomeFollower(term uint64, leader string) *RaftNode {
 	if term < node.term {
 		logger.Error("Node(%v) becomeFollower err, term: %v, leader: %v\n", node, term, leader)
 		return node

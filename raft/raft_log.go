@@ -89,11 +89,11 @@ func (log *RaftLog) CommittedIndexTerm() (index uint64, term uint64) {
 	return log.logStore.LastIndexTerm()
 }
 
-func (log *RaftLog) LoadTerm() (term uint64, vote uint64) {
+func (log *RaftLog) LoadTerm() (term uint64, leader string) {
 	return
 }
 
-func (log *RaftLog) SaveTerm(term uint64, vote uint64) {
+func (log *RaftLog) SaveTerm(term uint64, leader string) {
 }
 
 // append command to raft log

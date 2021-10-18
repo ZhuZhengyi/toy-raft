@@ -1,0 +1,14 @@
+
+Log:
+  LogFilePath: log/toy-raft.log
+  LogLevel: "debug"
+
+Raft:
+  Id: 1
+  ListenPort: 18111
+  PeerTcpPort: 18211
+  Peers:
+    - id: 2
+      peer: 127.0.0.1:18212
+    - id: 3
+      peer: 127.0.0.1:18213

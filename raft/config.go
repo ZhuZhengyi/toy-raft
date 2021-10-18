@@ -2,12 +2,24 @@
 
 package raft
 
+import (
+	"flag"
+	"io/ioutil"
+
+	yaml "gopkg.in/yaml.v2"
+)
+
 type Config struct {
-	ServerListenPort int    `json:"ListenPort" yaml:"ListenPort"`   //
-	PeerTcpPort      int    `json:"PeerTcpPort" yaml:"PeerTcpPort"` //
-	LogFilePath      string `json:"LogFilePath" yaml:"LogFilePath"` //
-	LogLevel         string `json:"LogLevel" yaml:"LogLevel"`       //
+	ServerListenPort int    `yaml:"ListenPort"`  //
+	PeerTcpPort      int    `yaml:"PeerTcpPort"` //
+	LogFilePath      string `yaml:"LogFilePath"` //
+	LogLevel         string `yaml:"LogLevel"`    //
 }
+
+var (
+	logger     = stdLogger
+	configFile = flag.String("c", "", "toy raft config file")
+)
 
 func DefaultConfig() *Config {
 	return &Config{
@@ -16,8 +28,19 @@ func DefaultConfig() *Config {
 	}
 }
 
-func ParseConfig(configPath string) *Config {
+func LoadConfig(configPath string) *Config {
 	config := DefaultConfig()
+	confYaml, err := ioutil.ReadFile(*configFile)
+	if err != nil {
+		logger.Fatal("config file %v error: %v", *configFile, err)
+	}
+
+	err = yaml.Unmarshal(confYaml, config)
+	if err != nil {
+		logger.Fatal("config file %v error: %v", *configFile, err)
+	}
+
+	logger.SetLogLevel(config.LogLevel)
 
 	return config
 }

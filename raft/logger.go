@@ -14,7 +14,7 @@ type Logger interface {
 	Info(format string, v ...interface{})
 	Warn(format string, v ...interface{})
 	Error(format string, v ...interface{})
-	SetLogLevel(logLevel LogLevel)
+	SetLogLevel(logLevel string)
 }
 
 type LogLevel int
@@ -27,7 +27,7 @@ const (
 	LogLevelFatal
 )
 
-func ParseLogLevel(logLevel string) LogLevel {
+func parseLogLevel(logLevel string) LogLevel {
 	switch strings.ToLower(logLevel) {
 	case "debug":
 		return LogLevelDebug
@@ -73,8 +73,8 @@ func NewStdLogger(logLevel LogLevel) *StdLogger {
 	}
 }
 
-func (l *StdLogger) SetLogLevel(logLevel LogLevel) {
-	l.logLevel = logLevel
+func (l *StdLogger) SetLogLevel(logLevel string) {
+	l.logLevel = parseLogLevel(logLevel)
 }
 
 func (l *StdLogger) Info(format string, v ...interface{}) {

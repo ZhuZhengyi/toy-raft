@@ -2,19 +2,8 @@
 package raft
 
 import (
-	"fmt"
 	"sync"
 )
-
-type Entry struct {
-	index   uint64
-	term    uint64
-	command []byte
-}
-
-func (e *Entry) String() string {
-	return fmt.Sprintf("%v %v %v", e.index, e.term, e.command)
-}
 
 type LogMetaKey uint32
 

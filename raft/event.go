@@ -147,7 +147,10 @@ func (e *EventHeartbeatReq) Marshal() []byte {
 func (e *EventHeartbeatReq) Unmarshal(data []byte) {
 	buffer := bytes.NewBuffer(data)
 
-	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+	if err := binary.Read(buffer, binary.BigEndian, &e.commitIndex); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+	if err := binary.Read(buffer, binary.BigEndian, &e.commitTerm); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
 	}
 }
@@ -163,7 +166,10 @@ func (e *EventHeartbeatResp) Marshal() []byte {
 func (e *EventHeartbeatResp) Unmarshal(data []byte) {
 	buffer := bytes.NewBuffer(data)
 
-	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+	if err := binary.Read(buffer, binary.BigEndian, &e.commitIndex); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+	if err := binary.Read(buffer, binary.BigEndian, &e.hasCommitted); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
 	}
 }
@@ -247,9 +253,6 @@ func (e *EventAppendEntriesReq) Unmarshal(data []byte) {
 
 func (e *EventAcceptEntriesResp) Marshal() []byte {
 	buffer := bytes.NewBuffer([]byte{})
-	binary.Write(buffer, binary.BigEndian, e.commitIndex)
-	binary.Write(buffer, binary.BigEndian, e.hasCommitted)
-
 	return buffer.Bytes()
 }
 
@@ -263,8 +266,6 @@ func (e *EventAcceptEntriesResp) Unmarshal(data []byte) {
 
 func (e *EventRefuseEntriesResp) Marshal() []byte {
 	buffer := bytes.NewBuffer([]byte{})
-	binary.Write(buffer, binary.BigEndian, e.commitIndex)
-	binary.Write(buffer, binary.BigEndian, e.hasCommitted)
 
 	return buffer.Bytes()
 }

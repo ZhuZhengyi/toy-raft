@@ -6,13 +6,9 @@ import (
 	"sync"
 )
 
-type EntryKey struct {
-	index uint64
-	term  uint64
-}
-
 type Entry struct {
-	EntryKey
+	index   uint64
+	term    uint64
 	command []byte
 }
 
@@ -102,10 +98,8 @@ func (log *RaftLog) Append(term uint64, command []byte) Entry {
 	defer log.Unlock()
 	lastIndex, _ := log.LastIndexTerm()
 	entry := Entry{
-		EntryKey: EntryKey{
-			index: lastIndex + 1,
-			term:  term,
-		},
+		index:   lastIndex + 1,
+		term:    term,
 		command: command,
 	}
 	log.entries = append(log.entries, entry)

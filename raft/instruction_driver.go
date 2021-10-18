@@ -29,6 +29,10 @@ func (d *InstDriver) drive() {
 	}
 }
 
+func (d *InstDriver) Stop() {
+	d.stopC <- struct{}{}
+}
+
 func (d *InstDriver) notifyAbort() {
 }
 

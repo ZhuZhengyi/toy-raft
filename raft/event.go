@@ -1,6 +1,10 @@
 package raft
 
 import (
+	"bytes"
+	"encoding/binary"
+	"unsafe"
+
 	"github.com/google/uuid"
 )
 
@@ -24,6 +28,9 @@ const (
 
 type MsgEvent interface {
 	Type() EventType
+	Size() uint64
+	Marshal() []byte
+	Unmarshal(data []byte)
 }
 
 type queuedEvent struct {
@@ -91,4 +98,181 @@ type EventAcceptEntriesResp struct {
 }
 
 type EventRefuseEntriesResp struct {
+}
+
+func (e *EventHeartbeatReq) Size() uint64 {
+	return uint64(unsafe.Sizeof(e))
+}
+
+func (a *EventHeartbeatResp) Size() uint64 {
+	return uint64(unsafe.Sizeof(a))
+}
+
+func (e *EventClientReq) Size() uint64 {
+	return uint64(unsafe.Sizeof(e))
+}
+
+func (a *EventClientResp) Size() uint64 {
+	return uint64(unsafe.Sizeof(a))
+}
+
+func (a *EventSolicitVoteReq) Size() uint64 {
+	return uint64(unsafe.Sizeof(a))
+}
+
+func (a *EventGrantVoteResp) Size() uint64 {
+	return uint64(unsafe.Sizeof(a))
+}
+
+func (a *EventAppendEntriesReq) Size() uint64 {
+	return uint64(unsafe.Sizeof(a))
+}
+
+func (a *EventAcceptEntriesResp) Size() uint64 {
+	return uint64(unsafe.Sizeof(a))
+}
+
+func (a *EventRefuseEntriesResp) Size() uint64 {
+	return uint64(unsafe.Sizeof(a))
+}
+
+func (e *EventHeartbeatReq) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+	binary.Write(buffer, binary.BigEndian, e.commitIndex)
+	binary.Write(buffer, binary.BigEndian, e.commitTerm)
+
+	return buffer.Bytes()
+}
+
+func (e *EventHeartbeatReq) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+}
+
+func (e *EventHeartbeatResp) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+	binary.Write(buffer, binary.BigEndian, e.commitIndex)
+	binary.Write(buffer, binary.BigEndian, e.hasCommitted)
+
+	return buffer.Bytes()
+}
+
+func (e *EventHeartbeatResp) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+}
+
+func (e *EventClientReq) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+
+	return buffer.Bytes()
+}
+
+func (e *EventClientReq) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+}
+
+func (e *EventClientResp) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+
+	return buffer.Bytes()
+}
+
+func (e *EventClientResp) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+}
+
+func (e *EventSolicitVoteReq) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+	binary.Write(buffer, binary.BigEndian, e.lastIndex)
+	binary.Write(buffer, binary.BigEndian, e.lastTerm)
+
+	return buffer.Bytes()
+}
+
+func (e *EventSolicitVoteReq) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+}
+
+func (e *EventGrantVoteResp) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+
+	return buffer.Bytes()
+}
+
+func (e *EventGrantVoteResp) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+}
+
+func (e *EventAppendEntriesReq) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+	binary.Write(buffer, binary.BigEndian, e.baseIndex)
+	binary.Write(buffer, binary.BigEndian, e.baseTerm)
+	for _, entry := range e.entries {
+		binary.Write(buffer, binary.BigEndian, entry)
+	}
+
+	return buffer.Bytes()
+}
+
+func (e *EventAppendEntriesReq) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+}
+
+func (e *EventAcceptEntriesResp) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+	binary.Write(buffer, binary.BigEndian, e.commitIndex)
+	binary.Write(buffer, binary.BigEndian, e.hasCommitted)
+
+	return buffer.Bytes()
+}
+
+func (e *EventAcceptEntriesResp) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
+}
+
+func (e *EventRefuseEntriesResp) Marshal() []byte {
+	buffer := bytes.NewBuffer([]byte{})
+	binary.Write(buffer, binary.BigEndian, e.commitIndex)
+	binary.Write(buffer, binary.BigEndian, e.hasCommitted)
+
+	return buffer.Bytes()
+}
+
+func (e *EventRefuseEntriesResp) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+		logger.Warn("unmarshal %v error: %v", e, err)
+	}
 }

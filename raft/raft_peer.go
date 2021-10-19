@@ -80,14 +80,13 @@ func (r *raft) sendToPeer(msg *Message, peer string) {
 	msg.from = AddressLocal
 	session := r.peerOutSession[peer]
 
-	msgBuff := make([]byte, 4096)
-	session.Write(msgBuff)
+	msg.SendTo(session)
 }
 
 func (r *raft) recvFromPeer(conn net.Conn) *Message {
 	msg := new(Message)
-	msgBuff := make([]byte, 4096)
-	conn.Read(msgBuff)
+
+	msg.RecvFrom(conn)
 
 	if msg.to.Type() != AddrTypePeer {
 		logger.Warn("recv invalid peer msg: %v, type not AddrTypePeer\n", msg)

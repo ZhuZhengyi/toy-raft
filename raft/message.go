@@ -2,8 +2,11 @@
 package raft
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
+	"unsafe"
 )
 
 type Message struct {
@@ -29,25 +32,51 @@ func (m *Message) String() string {
 }
 
 func (m *Message) Size() uint64 {
-	return 0
+	return m.from.Size() +
+		m.to.Size() +
+		uint64(unsafe.Sizeof(m.term)) +
+		m.event.Size()
 }
 
 func (m *Message) Marshal() []byte {
+	datas := takeBytes()
+	defer putBytes(datas)
+
+	buffer := bytes.NewBuffer(datas)
+	binary.Write(buffer, binary.BigEndian, m.term)
+	binary.Write(buffer, binary.BigEndian, m.event.Marshal())
+	return buffer.Bytes()
+}
+
+func (m *Message) Unmarshal(data []byte) {
+	buffer := bytes.NewBuffer(data)
+
+	if err := binary.Read(buffer, binary.BigEndian, m.term); err != nil {
+		logger.Warn("unmarshal %v error: %v", m, err)
+	}
+
+	m.event.Unmarshal(data[8:])
+}
+
+func (m *Message) RecvFrom(r io.Reader) error {
+	buf := takeBytes()
+	defer putBytes(buf)
+
+	r.Read(buf[:8])
+
+	//r.Read(p []byte)
+
 	return nil
 }
 
-func (m *Message) Unmarshal(msgData []byte) {
-}
-
-func (m *Message) Recv(r io.Reader) error {
-
-	return nil
-}
-
-func (m *Message) Send(w io.Writer) error {
+func (m *Message) SendTo(w io.Writer) error {
+	size := m.Size()
+	bytes := takeBytes()
+	binary.BigEndian.PutUint64(bytes, size)
+	if _, err := w.Write(bytes[:8]); err != nil {
+	}
 
 	data := m.Marshal()
-
 	if _, err := w.Write(data); err != nil {
 		logger.Error("send msg: %v err: %v", m, err)
 		return err

@@ -10,7 +10,7 @@ type RaftNode struct {
 	log        *RaftLog
 	queuedReqs []queuedEvent
 	proxyReqs  map[ReqId]Address
-	peers      []uint64
+	peers      []string
 	role       RaftRole
 }
 
@@ -163,11 +163,10 @@ func (node *RaftNode) forwardToLeaderQueued(leader Address) {
 			}
 			node.msgC <- msg
 		}
-
 	}
 }
 
-func (node *RaftNode) replicate(peer uint64, entry Entry) {
+func (node *RaftNode) replicate(peer string, entry Entry) {
 	appendEntriesEvent := &EventAppendEntriesReq{}
 	node.send(&AddrPeer{peer: peer}, appendEntriesEvent)
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"unsafe"
 )
 
 //go:generate stringer -type=AddrType  -linecomment
@@ -22,7 +23,7 @@ type Address interface {
 	String() string
 	Size() uint64
 	Marshal() []byte
-	Unmarshal([]byte) error
+	Unmarshal([]byte)
 }
 
 type AddrLocal struct {
@@ -62,7 +63,7 @@ func (a *AddrPeers) String() string {
 }
 
 func (a *AddrLocal) Size() uint64 {
-	return 1
+	return uint64(unsafe.Sizeof(AddrTypeLocal))
 }
 
 func (a *AddrClient) Size() uint64 {

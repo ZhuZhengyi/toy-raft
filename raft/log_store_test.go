@@ -8,13 +8,13 @@ func TestMemLog(t *testing.T) {
 
 	command := []byte{}
 	entries := []Entry{
-		{EntryKey{1, 1}, command},
-		{EntryKey{2, 1}, command},
-		{EntryKey{3, 2}, command},
-		{EntryKey{4, 2}, command},
-		{EntryKey{5, 3}, command},
-		{EntryKey{6, 4}, command},
-		{EntryKey{7, 5}, command},
+		{1, 1, command},
+		{2, 1, command},
+		{3, 2, command},
+		{4, 2, command},
+		{5, 3, command},
+		{6, 4, command},
+		{7, 5, command},
 	}
 
 	l.Append(entries)

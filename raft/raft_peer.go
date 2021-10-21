@@ -8,7 +8,7 @@ import (
 )
 
 func (r *raft) doPeerRecv(listerPort int) {
-	listenAddr := fmt.Sprintf(":%s", listerPort)
+	listenAddr := fmt.Sprintf(":%d", listerPort)
 	listener, err1 := net.Listen("tcp", listenAddr)
 	if err1 != nil {
 		logger.Fatal("listen tcp %v", listenAddr)

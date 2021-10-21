@@ -37,6 +37,7 @@ func NewRaft(id uint64, peers []string, logStore LogStore, sm InstStateMachine) 
 	peerOutC := make(chan Message, 64)
 	clientInC := make(chan reqSession, CLIENT_REQ_BATCH_SIZE)
 	node := NewRaftNode(id, RoleFollower, logStore, instC, msgC)
+	instDriver := NewInstDriver(instC, msgC, sm)
 	peerSessions := make(map[string]net.Conn)
 
 	r := &raft{
@@ -47,7 +48,7 @@ func NewRaft(id uint64, peers []string, logStore LogStore, sm InstStateMachine) 
 		peerOutC:       peerOutC,
 		peerOutSession: peerSessions,
 		node:           node,
-		smDriver:       NewInstDriver(instC, msgC, sm),
+		smDriver:       instDriver,
 		ticker:         time.NewTicker(TICK_INTERVAL_MS),
 		reqSessions:    make(map[ReqId]Session),
 	}

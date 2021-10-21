@@ -78,7 +78,7 @@ func (node *RaftNode) becomeCandidate() {
 		return
 	}
 	node.term += 1
-	node.log.SaveTerm(node.term, 0)
+	node.log.SaveTerm(node.term, "")
 
 	lastIndex, lastTerm := node.log.LastIndexTerm()
 	node.send(&AddrPeers{}, &EventSolicitVoteReq{lastIndex, lastTerm})

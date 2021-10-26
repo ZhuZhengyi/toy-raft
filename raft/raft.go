@@ -18,9 +18,10 @@ var (
 )
 
 type raft struct {
-	id             uint64 // raft id
-	listener       net.Listener
-	peers          []string
+	config   *RaftConfig
+	id       uint64 // raft id
+	listener net.Listener
+	//peers          []string
 	stopc          chan struct{}       // stop signal chan
 	clientInC      chan reqSession     // request recv from client
 	peerInC        chan Message        // msg chan  recv from peer
@@ -35,24 +36,25 @@ type raft struct {
 
 //NewRaft allocate a new raft struct from heap and init it
 //return raft struct pointer
-func NewRaft(id uint64, listenPort int, peers []string, logStore LogStore, sm InstStateMachine) *raft {
+func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
 	instC := make(chan Instruction, 64)
 	msgC := make(chan Message, 64)
 	peerInC := make(chan Message, 64)
 	peerOutC := make(chan Message, 64)
 	clientInC := make(chan reqSession, CLIENT_REQ_BATCH_SIZE)
-	node := NewRaftNode(id, RoleFollower, logStore, instC, msgC)
+	node := NewRaftNode(uint64(config.ID), RoleFollower, logStore, instC, msgC)
 	instDriver := NewInstDriver(instC, msgC, sm)
 	peerSessions := make(map[string]net.Conn)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", listenPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.PeerTcpPort))
 	if err != nil {
-		logger.Fatal("listen tcp %v", listenPort)
+		logger.Fatal("listen tcp %v", config.PeerTcpPort)
 		return nil
 	}
 
 	r := &raft{
-		id:             id,
+		config:         config,
+		id:             uint64(config.ID),
 		stopc:          make(chan struct{}),
 		listener:       listener,
 		clientInC:      clientInC,

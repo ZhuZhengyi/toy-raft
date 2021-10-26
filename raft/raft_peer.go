@@ -30,7 +30,7 @@ func (r *raft) runPeerMsgIn(stopC chan struct{}) {
 func (r *raft) runPeerMsgOut() {
 	connTimeout := time.Duration(10)
 	//
-	for _, peer := range r.peers {
+	for _, peer := range r.config.Peers {
 		peerConn, err := net.DialTimeout("tcp", peer, connTimeout)
 		if err != nil {
 			logger.Error("connect peer(%v) error:%v\n", peer, err)

@@ -6,9 +6,14 @@ type server struct {
 }
 
 //NewServer allocate a new server struct
-func NewServer(id uint64, listenPort int, peers []string, logStore LogStore, sm InstStateMachine) *server {
+func NewServer(confPath string, logStore LogStore, sm InstStateMachine) *server {
+	config, err := LoadConfig(confPath)
+	if err != nil {
+		return nil
+	}
+	//id uint64, listenPort int, peers []string, logStore LogStore, sm InstStateMachine
 	return &server{
-		raft: NewRaft(id, listenPort, peers, logStore, sm),
+		raft: NewRaft(&config.Raft, logStore, sm),
 	}
 }
 

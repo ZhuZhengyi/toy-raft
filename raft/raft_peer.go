@@ -100,7 +100,8 @@ func (r *raft) recvMsgFromPeer(conn net.Conn) *Message {
 	msg := new(Message)
 	msg.RecvFrom(conn)
 	msg.to = AddressLocal
-	msg.from = &AddrPeer{}
+	peer := conn.RemoteAddr().String()
+	msg.from = &AddrPeer{peer: peer}
 
 	return msg
 }

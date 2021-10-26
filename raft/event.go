@@ -26,6 +26,7 @@ const (
 	EventTypeInstallSnapReq                     // EventInstallSnapshot
 )
 
+//MsgEvent message event
 type MsgEvent interface {
 	Type() EventType
 	Size() uint64
@@ -52,6 +53,31 @@ var (
 	_ (MsgEvent) = (*EventAppendEntriesReq)(nil)
 )
 
+//NewMsgEvent allocate a new MsgEvent by eventType
+func NewMsgEvent(eventType EventType) MsgEvent {
+	switch eventType {
+	case EventTypeHeartbeatReq:
+		return new(EventHeartbeatReq)
+	case EventTypeHeartbeatResp:
+		return new(EventHeartbeatResp)
+	case EventTypeVoteReq:
+		return new(EventSolicitVoteReq)
+	case EventTypeVoteResp:
+		return new(EventGrantVoteResp)
+	case EventTypeClientReq:
+		return new(EventClientResp)
+	case EventTypeAppendEntriesReq:
+		return new(EventAppendEntriesReq)
+	case EventTypeAcceptEntriesResp:
+		return new(EventAcceptEntriesResp)
+	case EventTypeRefuseEntriesResp:
+		return new(EventRefuseEntriesResp)
+	default:
+		return new(EventHeartbeatReq)
+	}
+}
+
+//EventHeartbeatReq event heartbeat req from leader -> follower
 type EventHeartbeatReq struct {
 	commitIndex uint64
 	commitTerm  uint64

@@ -30,13 +30,34 @@ var (
 	_ RaftRole = (*Leader)(nil)
 )
 
+//Type leader type
 func (l *Leader) Type() RoleType {
 	return RoleLeader
 }
 
+//Step step rsm by msg
 func (l *Leader) Step(msg *Message) {
+	switch msg.EventType() {
+	case EventTypeHeartbeatResp:
+		//TODO:
+	case EventTypeAcceptEntriesResp:
+		//TODO:
+	case EventTypeRefuseEntriesResp:
+		//TODO:
+	case EventTypeClientReq:
+		//TODO:
+	case EventTypeClientResp:
+		//TODO:
+	case EventTypeVoteReq, EventTypeVoteResp:
+		{
+		}
+	default:
+		logger.Warn("role(%v) step unexpected msg(%v)\n", l, msg)
+		//TODO:
+	}
 }
 
+//Tick tick leader
 func (l *Leader) Tick() {
 	if len(l.peers) > 0 {
 		l.heartbeatTicks += 1

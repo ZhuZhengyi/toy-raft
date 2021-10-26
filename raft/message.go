@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	RecvMessageErr = errors.New("recv message err")
+	//ErrRecvMessage
+	ErrRecvMessage = errors.New("recv message err")
 )
 
 //Message represents
@@ -29,10 +30,12 @@ func NewMessage(from, to Address, term uint64, event MsgEvent) *Message {
 	}
 }
 
+//EventType msg event type
 func (m *Message) EventType() EventType {
 	return m.event.Type()
 }
 
+//String
 func (m *Message) String() string {
 	return fmt.Sprintf("Message(%v -> %v): term(%v) event(%v)",
 		m.from, m.to, m.term, m.event)
@@ -40,20 +43,19 @@ func (m *Message) String() string {
 
 //Size message byte size with marshal
 func (m *Message) Size() uint64 {
-	return m.from.Size() +
-		m.to.Size() +
-		uint64(unsafe.Sizeof(m.term)) +
+	return uint64(unsafe.Sizeof(m.term)) +
+		uint64(unsafe.Sizeof(m.EventType())) +
 		m.event.Size()
 }
 
 //Marshal message to []byte
-//
 func (m *Message) Marshal() []byte {
 	datas := takeBytes()
 	defer putBytes(datas)
 
 	buffer := bytes.NewBuffer(datas)
 	binary.Write(buffer, binary.BigEndian, m.term)
+	binary.Write(buffer, binary.BigEndian, m.EventType())
 	binary.Write(buffer, binary.BigEndian, m.event.Marshal())
 	return buffer.Bytes()
 }
@@ -62,10 +64,14 @@ func (m *Message) Marshal() []byte {
 func (m *Message) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
-	if err := binary.Read(buffer, binary.BigEndian, m.term); err != nil {
+	if err := binary.Read(buffer, binary.BigEndian, &m.term); err != nil {
 		logger.Warn("unmarshal %v error: %v", m, err)
 		return err
 	}
+
+	var msgEventType EventType
+	binary.Read(buffer, binary.BigEndian, &msgEventType)
+	m.event = NewMsgEvent(msgEventType)
 
 	return m.event.Unmarshal(data[8:])
 }
@@ -82,8 +88,8 @@ func (m *Message) RecvFrom(r io.Reader) error {
 	}
 	size := binary.BigEndian.Uint64(buf[:8])
 	if size < 8 || size > 256*1024*1024 {
-		logger.Error("")
-		return RecvMessageErr
+		logger.Error("recv error msg size: %v \n", size)
+		return ErrRecvMessage
 	}
 
 	_, err = r.Read(buf[:size])

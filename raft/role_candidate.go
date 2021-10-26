@@ -2,6 +2,7 @@
 
 package raft
 
+//Candidate role
 type Candidate struct {
 	*RaftNode
 	electionTicks   int
@@ -9,6 +10,11 @@ type Candidate struct {
 	votedCount      uint64
 }
 
+var (
+	_ RaftRole = (*Candidate)(nil)
+)
+
+//NewCandidate allocate a new candidate role
 func NewCandidate(node *RaftNode) *Candidate {
 	c := &Candidate{
 		RaftNode:        node,
@@ -20,27 +26,13 @@ func NewCandidate(node *RaftNode) *Candidate {
 	return c
 }
 
-var (
-	_ RaftRole = (*Candidate)(nil)
-)
-
+//Type candidate role type
 func (c *Candidate) Type() RoleType {
 	return RoleCandidate
 }
 
+//Step step candidate state by msg
 func (c *Candidate) Step(msg *Message) {
-	if !c.validateMsg(msg) {
-		return
-	}
-
-	if msg.term > c.term {
-		if msg.from.Type() == AddrTypePeer {
-			from := msg.from.(*AddrPeer)
-			c.becomeFollower(msg.term, from.peer).Step(msg)
-			return
-		}
-	}
-
 	switch msg.event.Type() {
 	case EventTypeHeartbeatReq:
 		if msg.from.Type() == AddrTypePeer {
@@ -49,7 +41,7 @@ func (c *Candidate) Step(msg *Message) {
 			return
 		}
 	case EventTypeVoteResp:
-		c.votedCount += 1
+		c.votedCount++
 		if c.votedCount >= c.quorum() {
 			node := c.becomeLeader()
 			for _, queuedReq := range node.queuedReqs {
@@ -72,12 +64,12 @@ func (c *Candidate) Step(msg *Message) {
 	case EventTypeVoteReq:
 	default:
 		logger.Warn("RaftRole(%v) reciev error msg: (%v)\n", c, msg)
-		//TODO: warn
 	}
 }
 
+//Tick candidate tick
 func (c *Candidate) Tick() {
-	c.electionTicks += 1
+	c.electionTicks++
 	if c.electionTicks >= c.electionTimeout {
 		c.becomeCandidate()
 	}

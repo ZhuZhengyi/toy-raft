@@ -48,6 +48,7 @@ func (node *RaftNode) String() string {
 	return fmt.Sprintf("Node(%v) term(%v) role(%v)", node.id, node.term, node.RoleType())
 }
 
+//RoleType get raftnode role type
 func (node *RaftNode) RoleType() RoleType {
 	return node.role.Type()
 }
@@ -67,7 +68,6 @@ func (node *RaftNode) becomeRole(roleType RoleType) {
 	case RoleLeader:
 		node.role = NewLeader(node)
 	}
-
 }
 
 func (node *RaftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
@@ -77,7 +77,7 @@ func (node *RaftNode) becomeCandidate() {
 		logger.Error("Node(%v) becomeCandidate \n", node)
 		return
 	}
-	node.term += 1
+	node.term++
 	node.log.SaveTerm(node.term, "")
 
 	lastIndex, lastTerm := node.log.LastIndexTerm()
@@ -181,6 +181,7 @@ func (node *RaftNode) send(to Address, event MsgEvent) {
 	node.msgC <- msg
 }
 
+//Step step rsm by msg
 func (node *RaftNode) Step(msg *Message) {
 	if !node.validateMsg(msg) {
 		logger.Warn("Node(%v) recieve invalid msg: %v", node, msg)
@@ -196,6 +197,7 @@ func (node *RaftNode) Step(msg *Message) {
 	node.role.Step(msg)
 }
 
+//Tick tick rsm
 func (node *RaftNode) Tick() {
 	node.role.Tick()
 }

@@ -9,6 +9,7 @@ type InstDriver struct {
 	sm InstStateMachine
 }
 
+//NewInstDriver allocate a new InstDriver from heap
 func NewInstDriver(instC chan Instruction, msgC chan Message, sm InstStateMachine) *InstDriver {
 	return &InstDriver{
 		stopC: make(chan struct{}),
@@ -18,7 +19,7 @@ func NewInstDriver(instC chan Instruction, msgC chan Message, sm InstStateMachin
 	}
 }
 
-func (d *InstDriver) drive() {
+func (d *InstDriver) run() {
 	for {
 		select {
 		case <-d.stopC:
@@ -29,7 +30,8 @@ func (d *InstDriver) drive() {
 	}
 }
 
-func (d *InstDriver) Stop() {
+//
+func (d *InstDriver) stop() {
 	d.stopC <- struct{}{}
 }
 
@@ -48,6 +50,7 @@ func (d *InstDriver) queryVote() {
 func (d *InstDriver) queryExecute() {
 }
 
+// execute instruction
 func (d *InstDriver) execute(inst Instruction) {
 	switch inst.(type) {
 	case *InstAbort:

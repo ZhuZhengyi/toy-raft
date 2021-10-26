@@ -3,6 +3,7 @@
 package raft
 
 import (
+	"fmt"
 	"net"
 	"time"
 )
@@ -18,19 +19,23 @@ var (
 
 type raft struct {
 	id             uint64 // raft id
+	listener       net.Listener
 	peers          []string
 	stopc          chan struct{}       // stop signal chan
 	clientInC      chan reqSession     // request recv from client
 	peerInC        chan Message        // msg chan  recv from peer
 	peerOutC       chan Message        // msg send to peer
 	peerOutSession map[string]net.Conn //
+	transport      Transport           //
 	node           *RaftNode
 	ticker         *time.Ticker
 	smDriver       *InstDriver
 	reqSessions    map[ReqId]Session
 }
 
-func NewRaft(id uint64, peers []string, logStore LogStore, sm InstStateMachine) *raft {
+//NewRaft allocate a new raft struct from heap and init it
+//return raft struct pointer
+func NewRaft(id uint64, listenPort int, peers []string, logStore LogStore, sm InstStateMachine) *raft {
 	instC := make(chan Instruction, 64)
 	msgC := make(chan Message, 64)
 	peerInC := make(chan Message, 64)
@@ -40,9 +45,16 @@ func NewRaft(id uint64, peers []string, logStore LogStore, sm InstStateMachine) 
 	instDriver := NewInstDriver(instC, msgC, sm)
 	peerSessions := make(map[string]net.Conn)
 
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", listenPort))
+	if err != nil {
+		logger.Fatal("listen tcp %v", listenPort)
+		return nil
+	}
+
 	r := &raft{
 		id:             id,
 		stopc:          make(chan struct{}),
+		listener:       listener,
 		clientInC:      clientInC,
 		peerInC:        peerInC,
 		peerOutC:       peerOutC,
@@ -57,16 +69,16 @@ func NewRaft(id uint64, peers []string, logStore LogStore, sm InstStateMachine) 
 }
 
 func (r *raft) Serve() {
-	go r.smDriver.drive()
-	r.doPeerRecv(18711)
-	r.doPeerSend()
+	go r.smDriver.run()
+	go r.runPeerMsgOut()
+	go r.runPeerMsgIn(r.stopc)
 	go r.run()
 }
 
 func (r *raft) Stop() {
 	r.stopc <- struct{}{}
 
-	r.smDriver.Stop()
+	r.smDriver.stop()
 }
 
 func (r *raft) run() {

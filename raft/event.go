@@ -30,7 +30,7 @@ type MsgEvent interface {
 	Type() EventType
 	Size() uint64
 	Marshal() []byte
-	Unmarshal(data []byte)
+	Unmarshal(data []byte) error
 }
 
 type queuedEvent struct {
@@ -144,15 +144,18 @@ func (e *EventHeartbeatReq) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventHeartbeatReq) Unmarshal(data []byte) {
+func (e *EventHeartbeatReq) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, &e.commitIndex); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
 	if err := binary.Read(buffer, binary.BigEndian, &e.commitTerm); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+	return nil
 }
 
 func (e *EventHeartbeatResp) Marshal() []byte {
@@ -163,15 +166,18 @@ func (e *EventHeartbeatResp) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventHeartbeatResp) Unmarshal(data []byte) {
+func (e *EventHeartbeatResp) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, &e.commitIndex); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
 	if err := binary.Read(buffer, binary.BigEndian, &e.hasCommitted); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+	return nil
 }
 
 func (e *EventClientReq) Marshal() []byte {
@@ -180,12 +186,14 @@ func (e *EventClientReq) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventClientReq) Unmarshal(data []byte) {
+func (e *EventClientReq) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+	return nil
 }
 
 func (e *EventClientResp) Marshal() []byte {
@@ -194,12 +202,14 @@ func (e *EventClientResp) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventClientResp) Unmarshal(data []byte) {
+func (e *EventClientResp) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+	return nil
 }
 
 func (e *EventSolicitVoteReq) Marshal() []byte {
@@ -210,12 +220,14 @@ func (e *EventSolicitVoteReq) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventSolicitVoteReq) Unmarshal(data []byte) {
+func (e *EventSolicitVoteReq) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+	return nil
 }
 
 func (e *EventGrantVoteResp) Marshal() []byte {
@@ -224,12 +236,15 @@ func (e *EventGrantVoteResp) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventGrantVoteResp) Unmarshal(data []byte) {
+func (e *EventGrantVoteResp) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+
+	return nil
 }
 
 func (e *EventAppendEntriesReq) Marshal() []byte {
@@ -243,12 +258,14 @@ func (e *EventAppendEntriesReq) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventAppendEntriesReq) Unmarshal(data []byte) {
+func (e *EventAppendEntriesReq) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+	return nil
 }
 
 func (e *EventAcceptEntriesResp) Marshal() []byte {
@@ -256,12 +273,14 @@ func (e *EventAcceptEntriesResp) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventAcceptEntriesResp) Unmarshal(data []byte) {
+func (e *EventAcceptEntriesResp) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+	return nil
 }
 
 func (e *EventRefuseEntriesResp) Marshal() []byte {
@@ -270,10 +289,12 @@ func (e *EventRefuseEntriesResp) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *EventRefuseEntriesResp) Unmarshal(data []byte) {
+func (e *EventRefuseEntriesResp) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
 		logger.Warn("unmarshal %v error: %v", e, err)
+		return err
 	}
+	return nil
 }

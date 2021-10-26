@@ -5,9 +5,10 @@ type server struct {
 	raft *raft
 }
 
-func NewServer(id uint64, peers []string, logStore LogStore, sm InstStateMachine) *server {
+//NewServer allocate a new server struct
+func NewServer(id uint64, listenPort int, peers []string, logStore LogStore, sm InstStateMachine) *server {
 	return &server{
-		raft: NewRaft(id, peers, logStore, sm),
+		raft: NewRaft(id, listenPort, peers, logStore, sm),
 	}
 }
 

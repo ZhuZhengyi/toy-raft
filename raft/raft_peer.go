@@ -2,57 +2,67 @@
 package raft
 
 import (
-	"fmt"
+	"context"
 	"net"
 	"time"
 )
 
-func (r *raft) doPeerRecv(listerPort int) {
-	listenAddr := fmt.Sprintf(":%d", listerPort)
-	listener, err1 := net.Listen("tcp", listenAddr)
-	if err1 != nil {
-		logger.Fatal("listen tcp %v", listenAddr)
-	}
-
-	// run peer recv in task
-	go func() {
-		for {
-			inConn, err2 := listener.Accept()
-			if err2 != nil {
-				logger.Fatal("listen tcp %v, error: %v", listenAddr, err2)
-				return
-			}
-			go func() {
-				for {
-					msg := r.recvFromPeer(inConn)
-					r.peerInC <- *msg
-				}
-			}()
+// deal with peer in connect
+func (r *raft) runPeerMsgIn(stopC chan struct{}) {
+	for {
+		select {
+		case <-stopC:
+			logger.Info("doPeerRecv stopped")
+			return
+		default:
 		}
-	}()
+		conn, err2 := r.listener.Accept()
+		if err2 != nil {
+			logger.Fatal("listen tcp %v, error: %v", r.listener, err2)
+			return
+		}
+		ctx, _ := context.WithCancel(context.Background())
+
+		go r.doRecvFromConn(ctx, conn)
+	}
 }
 
-func (r *raft) doPeerSend() {
+func (r *raft) runPeerMsgOut() {
 	connTimeout := time.Duration(10)
-
-	// init peer out session
+	//
 	for _, peer := range r.peers {
 		peerConn, err := net.DialTimeout("tcp", peer, connTimeout)
 		if err != nil {
-			logger.Error("")
+			logger.Error("connect peer(%v) error:%v\n", peer, err)
+		} else {
+			r.peerOutSession[peer] = peerConn
+			logger.Info("get peer(%v) connection\n", peer)
 		}
-		r.peerOutSession[peer] = peerConn
 	}
 
-	// run peer send out task
-	go func() {
-		for {
-			select {
-			case msg := <-r.peerOutC:
-				r.sendPeerMsg(&msg)
-			}
+	for {
+		select {
+		case <-r.stopc:
+			logger.Info("doPeerSend stopped\n")
+			return
+		case msg := <-r.peerOutC:
+			r.sendPeerMsg(&msg)
 		}
-	}()
+	}
+}
+
+func (r *raft) doRecvFromConn(ctx context.Context, conn net.Conn) {
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("doPeerRecv stopped")
+			return
+		default:
+		}
+		msg := r.recvMsgFromPeer(conn)
+		r.peerInC <- *msg
+	}
+
 }
 
 func (r *raft) sendPeerMsg(msg *Message) {
@@ -64,35 +74,31 @@ func (r *raft) sendPeerMsg(msg *Message) {
 	case AddrTypePeer:
 		addrTo := msg.to.(*AddrPeer)
 		peer := addrTo.peer
-		r.sendToPeer(msg, peer)
+		r.sendMsgToPeer(msg, peer)
 	case AddrTypePeers:
 		addrTo := msg.to.(*AddrPeers)
 		for _, peer := range addrTo.peers {
-			r.sendToPeer(msg, peer)
+			r.sendMsgToPeer(msg, peer)
 		}
 	default:
 		logger.Warn("sentToPeer invalid msg: %v\n", msg)
 	}
 }
 
-func (r *raft) sendToPeer(msg *Message, peer string) {
+func (r *raft) sendMsgToPeer(msg *Message, peer string) {
 	msg.to = &AddrPeer{peer}
 	msg.from = AddressLocal
 	session := r.peerOutSession[peer]
 
 	msg.SendTo(session)
+
+	//putMessage(msg)
 }
 
-func (r *raft) recvFromPeer(conn net.Conn) *Message {
+// recv message from peer
+func (r *raft) recvMsgFromPeer(conn net.Conn) *Message {
 	msg := new(Message)
-
 	msg.RecvFrom(conn)
-
-	if msg.to.Type() != AddrTypePeer {
-		logger.Warn("recv invalid peer msg: %v, type not AddrTypePeer\n", msg)
-		return nil
-	}
-
 	msg.to = AddressLocal
 	msg.from = &AddrPeer{}
 

@@ -4,11 +4,17 @@ package raft
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"unsafe"
 )
 
+var (
+	RecvMessageErr = errors.New("recv message err")
+)
+
+//Message represents
 type Message struct {
 	from  Address
 	to    Address
@@ -16,6 +22,7 @@ type Message struct {
 	event MsgEvent
 }
 
+//NewMessage allocate a new message
 func NewMessage(from, to Address, term uint64, event MsgEvent) *Message {
 	return &Message{
 		from, to, term, event,
@@ -31,6 +38,7 @@ func (m *Message) String() string {
 		m.from, m.to, m.term, m.event)
 }
 
+//Size message byte size with marshal
 func (m *Message) Size() uint64 {
 	return m.from.Size() +
 		m.to.Size() +
@@ -38,6 +46,8 @@ func (m *Message) Size() uint64 {
 		m.event.Size()
 }
 
+//Marshal message to []byte
+//
 func (m *Message) Marshal() []byte {
 	datas := takeBytes()
 	defer putBytes(datas)
@@ -48,32 +58,53 @@ func (m *Message) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (m *Message) Unmarshal(data []byte) {
+//Unmarshal message from []byte to message
+func (m *Message) Unmarshal(data []byte) error {
 	buffer := bytes.NewBuffer(data)
 
 	if err := binary.Read(buffer, binary.BigEndian, m.term); err != nil {
 		logger.Warn("unmarshal %v error: %v", m, err)
+		return err
 	}
 
-	m.event.Unmarshal(data[8:])
+	return m.event.Unmarshal(data[8:])
 }
 
+//RecvFrom recv message from remote peer
 func (m *Message) RecvFrom(r io.Reader) error {
 	buf := takeBytes()
 	defer putBytes(buf)
 
-	r.Read(buf[:8])
+	_, err := r.Read(buf[:8])
+	if err != nil {
+		logger.Error("read msg size error:%v", err)
+		return err
+	}
+	size := binary.BigEndian.Uint64(buf[:8])
+	if size < 8 || size > 256*1024*1024 {
+		logger.Error("")
+		return RecvMessageErr
+	}
 
-	//r.Read(p []byte)
+	_, err = r.Read(buf[:size])
+	if err != nil {
+		logger.Error("read msg size error:%v", err)
+		return err
+	}
+	//msg := takeMessage()
+	m.Unmarshal(buf[:size])
 
 	return nil
 }
 
+//SendTo send  message to remote peer
 func (m *Message) SendTo(w io.Writer) error {
 	size := m.Size()
 	bytes := takeBytes()
 	binary.BigEndian.PutUint64(bytes, size)
 	if _, err := w.Write(bytes[:8]); err != nil {
+		logger.Fatal("Sent message(%v) err: %v\n", m, err)
+		return err
 	}
 
 	data := m.Marshal()

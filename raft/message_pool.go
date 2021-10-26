@@ -11,12 +11,12 @@ var (
 
 	bytePool = &sync.Pool{
 		New: func() interface{} {
-			return make([]byte, 128)
+			return make([]byte, 4096)
 		},
 	}
 )
 
-func getMessage() *Message {
+func takeMessage() *Message {
 	msg := msgPool.Get().(*Message)
 
 	return msg

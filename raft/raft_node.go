@@ -2,6 +2,7 @@ package raft
 
 import "fmt"
 
+//RaftNode raft rsm node
 type RaftNode struct {
 	id         uint64
 	term       uint64
@@ -14,6 +15,7 @@ type RaftNode struct {
 	role       RaftRole
 }
 
+//NewRaftNode allocate a new RaftNode struct in heap and init
 func NewRaftNode(id uint64,
 	role RoleType,
 	logStore LogStore,
@@ -137,43 +139,54 @@ func (node *RaftNode) abortProxyReqs() {
 	}
 }
 
+// forward to leader
 func (node *RaftNode) forwardToLeaderQueued(leader Address) {
 	if node.RoleType() == RoleLeader {
 		return
 	}
-	for _, queuedEvent := range node.queuedReqs {
-		if queuedEvent.event.Type() == EventTypeClientReq {
-			originEvent := queuedEvent.event.(*EventClientReq)
-			from := queuedEvent.from
-
-			// record origin req
-			node.proxyReqs[originEvent.id] = from
-
-			// forward
-			proxyFrom := from
-			if from.Type() == AddrTypeClient {
-				proxyFrom = new(AddrLocal)
-			}
-
-			msg := Message{
-				from:  proxyFrom,
-				to:    leader,
-				term:  0,
-				event: queuedEvent.event,
-			}
-			node.msgC <- msg
+	for _, queueReq := range node.queuedReqs {
+		if queueReq.EventType() != EventTypeClientReq {
+			logger.Warn("forward req(%v) \n", queueReq)
+			continue
 		}
+		originEvent := queueReq.event.(*EventClientReq)
+		from := queueReq.from
+
+		// record origin req
+		node.proxyReqs[originEvent.id] = from
+
+		// forward
+		proxyFrom := from
+		if from.Type() == AddrTypeClient {
+			proxyFrom = AddressLocal
+		}
+
+		msg := Message{
+			from:  proxyFrom,
+			to:    leader,
+			term:  0,
+			event: queueReq.event,
+		}
+		node.msgC <- msg
 	}
 }
 
-func (node *RaftNode) replicate(peer string, entry Entry) {
-	appendEntriesEvent := &EventAppendEntriesReq{}
+// send a appendEntry
+func (node *RaftNode) replicate(peer string, entry ...Entry) {
+	index, _ := node.log.LastIndexTerm()
+	appendEntriesEvent := &EventAppendEntriesReq{
+		baseIndex: index,
+		baseTerm:  node.term,
+		entries:   make([]Entry, 0),
+	}
+	appendEntriesEvent.entries = append(appendEntriesEvent.entries, entry...)
 	node.send(&AddrPeer{peer: peer}, appendEntriesEvent)
 }
 
+// send event to
 func (node *RaftNode) send(to Address, event MsgEvent) {
 	msg := Message{
-		from:  new(AddrLocal),
+		from:  AddressLocal,
 		to:    to,
 		term:  node.term,
 		event: event,

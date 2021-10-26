@@ -5,6 +5,7 @@ import (
 	"sync"
 )
 
+//LogMetaKey log meta key
 type LogMetaKey uint32
 
 const (
@@ -12,6 +13,7 @@ const (
 	MetaKeyAppliedIndex
 )
 
+//LogStore log store interface
 //  |        store         |
 //  | ---------------|-----|
 //                   ^
@@ -25,6 +27,7 @@ type LogStore interface {
 	LoadMetaData(key LogMetaKey) []byte
 }
 
+//RaftLog raft log
 //  | ----- store  -----   |
 //  |          | ------- entries ---- |
 //  |          | unapplied | uncommit |

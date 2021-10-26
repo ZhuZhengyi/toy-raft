@@ -14,6 +14,7 @@ type ReqId = uuid.UUID
 type EventType int32
 
 const (
+	EventTypeUnkown            EventType = -1   // EventUknown
 	EventTypeHeartbeatReq      EventType = iota // EventHeartbeatReq
 	EventTypeHeartbeatResp                      // EventHeartbeatResponse
 	EventTypeClientReq                          // EventClientReq
@@ -37,6 +38,15 @@ type MsgEvent interface {
 type queuedEvent struct {
 	from  Address
 	event MsgEvent
+}
+
+func (e *queuedEvent) EventType() EventType {
+	if e.event != nil {
+		return e.event.Type()
+
+	}
+	return EventTypeUnkown
+
 }
 
 var (

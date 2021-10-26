@@ -32,7 +32,10 @@ func NewMessage(from, to Address, term uint64, event MsgEvent) *Message {
 
 //EventType msg event type
 func (m *Message) EventType() EventType {
-	return m.event.Type()
+	if m.event != nil {
+		return m.event.Type()
+	}
+	return EventTypeUnkown
 }
 
 //String

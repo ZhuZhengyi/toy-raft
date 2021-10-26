@@ -8,25 +8,36 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[EventTypeHeartbeatReq-0]
-	_ = x[EventTypeHeartbeatResp-1]
-	_ = x[EventTypeClientReq-2]
-	_ = x[EventTypeClientResp-3]
-	_ = x[EventTypeVoteReq-4]
-	_ = x[EventTypeVoteResp-5]
-	_ = x[EventTypeAppendEntriesReq-6]
-	_ = x[EventTypeAcceptEntriesResp-7]
-	_ = x[EventTypeRefuseEntriesResp-8]
-	_ = x[EventTypeInstallSnapReq-9]
+	_ = x[EventTypeUnkown - -1]
+	_ = x[EventTypeHeartbeatReq-1]
+	_ = x[EventTypeHeartbeatResp-2]
+	_ = x[EventTypeClientReq-3]
+	_ = x[EventTypeClientResp-4]
+	_ = x[EventTypeVoteReq-5]
+	_ = x[EventTypeVoteResp-6]
+	_ = x[EventTypeAppendEntriesReq-7]
+	_ = x[EventTypeAcceptEntriesResp-8]
+	_ = x[EventTypeRefuseEntriesResp-9]
+	_ = x[EventTypeInstallSnapReq-10]
 }
 
-const _EventType_name = "EventHeartbeatReqEventHeartbeatResponseEventClientReqEventClientResponseEventVoteReqEventVoteResponseEventAppendEntriesReqEventAcceptEntriesResponseEventRefuseEntriesResponseEventInstallSnapshot"
+const (
+	_EventType_name_0 = "EventUknown"
+	_EventType_name_1 = "EventHeartbeatReqEventHeartbeatResponseEventClientReqEventClientResponseEventVoteReqEventVoteResponseEventAppendEntriesReqEventAcceptEntriesResponseEventRefuseEntriesResponseEventInstallSnapshot"
+)
 
-var _EventType_index = [...]uint8{0, 17, 39, 53, 72, 84, 101, 122, 148, 174, 194}
+var (
+	_EventType_index_1 = [...]uint8{0, 17, 39, 53, 72, 84, 101, 122, 148, 174, 194}
+)
 
 func (i EventType) String() string {
-	if i < 0 || i >= EventType(len(_EventType_index)-1) {
+	switch {
+	case i == -1:
+		return _EventType_name_0
+	case 1 <= i && i <= 10:
+		i -= 1
+		return _EventType_name_1[_EventType_index_1[i]:_EventType_index_1[i+1]]
+	default:
 		return "EventType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _EventType_name[_EventType_index[i]:_EventType_index[i+1]]
 }

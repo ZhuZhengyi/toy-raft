@@ -18,10 +18,9 @@ var (
 )
 
 type raft struct {
-	config   *RaftConfig
-	id       uint64 // raft id
-	listener net.Listener
-	//peers          []string
+	config         *RaftConfig
+	id             uint64 // raft id
+	listener       net.Listener
 	stopc          chan struct{}       // stop signal chan
 	clientInC      chan reqSession     // request recv from client
 	peerInC        chan Message        // msg chan  recv from peer

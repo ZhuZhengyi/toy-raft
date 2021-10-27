@@ -41,7 +41,17 @@ func (f *Follower) Step(msg *Message) {
 	switch msg.EventType() {
 	case EventTypeHeartbeatReq:
 		if f.isFromLeader(msg.from) {
-			//TODO:
+			hbReq := msg.event.(*EventHeartbeatReq)
+			hasCommitted := f.log.Has(hbReq.commitIndex, hbReq.commitTerm)
+			if hasCommitted && hbReq.commitIndex > f.log.CommittedIndex() {
+				oldCommittedIndex := f.log.CommittedIndex()
+				f.log.Commit(hbReq.commitIndex)
+				for i := oldCommittedIndex + 1; i < hbReq.commitIndex; i++ {
+					entry := f.log.Get(i)
+					instruction := &InstApply{entry}
+					f.instC <- instruction
+				}
+			}
 		}
 	case EventTypeVoteReq:
 		//TODO:

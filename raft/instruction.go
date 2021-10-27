@@ -32,7 +32,7 @@ type InstAbort struct {
 }
 
 type InstApply struct {
-	entry Entry
+	entry *Entry
 }
 
 type InstNotify struct {

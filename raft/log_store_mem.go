@@ -2,7 +2,14 @@
 
 package raft
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
+
+var (
+	ErrNoEntry = errors.New("no entry exist")
+)
 
 type memLogStore struct {
 	sync.RWMutex
@@ -33,15 +40,15 @@ func (log *memLogStore) AppliedIndex() uint64 {
 	return log.appliedIndex
 }
 
-func (log *memLogStore) Get(index uint64) Entry {
+func (log *memLogStore) Get(index uint64) *Entry {
 	log.RLock()
 	defer log.RUnlock()
 	for _, e := range log.entries {
 		if e.index == index {
-			return e
+			return &e
 		}
 	}
-	return Entry{}
+	return nil
 }
 
 func (log *memLogStore) LastIndexTerm() (index, term uint64) {

@@ -20,7 +20,7 @@ const (
 //                applied
 type LogStore interface {
 	Append([]Entry)                      // append entries to store
-	Get(index uint64) Entry              //
+	Get(index uint64) *Entry             //
 	AppliedIndex() uint64                // get applied entry index from store
 	LastIndexTerm() (index, term uint64) //
 	StoreMetaData(key LogMetaKey, data []byte)
@@ -77,11 +77,45 @@ func (log *RaftLog) CommittedIndexTerm() (index uint64, term uint64) {
 	return log.logStore.LastIndexTerm()
 }
 
+func (log *RaftLog) CommittedIndex() uint64 {
+	index, _ := log.CommittedIndexTerm()
+	return index
+}
+
+//LoadTerm load term, leader from meta
 func (log *RaftLog) LoadTerm() (term uint64, leader string) {
 	return
 }
 
+//SaveTerm save term, leader meta into log store
 func (log *RaftLog) SaveTerm(term uint64, leader string) {
+}
+
+func (log *RaftLog) Get(index uint64) *Entry {
+	log.RLock()
+	defer log.RUnlock()
+
+	if index < log.appliedIndex {
+		return log.logStore.Get(index)
+	}
+
+	for _, entry := range log.entries {
+		if entry.index == index {
+			return &entry
+		}
+	}
+
+	return nil
+}
+
+//Has has entry with index, term in raftlog
+func (log *RaftLog) Has(index, term uint64) bool {
+	entry := log.Get(index)
+	if entry == nil && entry.term == term {
+		return true
+	}
+
+	return false
 }
 
 // append command to raft log

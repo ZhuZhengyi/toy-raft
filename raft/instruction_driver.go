@@ -57,6 +57,11 @@ func (d *InstDriver) execute(inst Instruction) {
 		d.queryAbort()
 	case *InstVote:
 		d.queryVote()
-
+	case *InstApply:
+		applyInst := inst.(*InstApply)
+		entry := applyInst.entry
+		d.sm.Apply(entry.index, entry.command)
+	default:
+		logger.Warn("execute unexpected inst(%v)\n", inst)
 	}
 }

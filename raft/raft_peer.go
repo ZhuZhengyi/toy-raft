@@ -21,6 +21,7 @@ func (r *raft) runPeerMsgIn(stopC chan struct{}) {
 			logger.Fatal("listen tcp %v, error: %v", r.listener, err2)
 			return
 		}
+
 		ctx, _ := context.WithCancel(context.Background())
 
 		go r.doRecvFromConn(ctx, conn)

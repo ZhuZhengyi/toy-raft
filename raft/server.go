@@ -11,7 +11,7 @@ func NewServer(confPath string, logStore LogStore, sm InstStateMachine) *server 
 	if err != nil {
 		return nil
 	}
-	//id uint64, listenPort int, peers []string, logStore LogStore, sm InstStateMachine
+
 	return &server{
 		raft: NewRaft(&config.Raft, logStore, sm),
 	}
@@ -23,4 +23,22 @@ func (s *server) Start() {
 
 func (s *server) Stop() {
 	s.raft.Stop()
+}
+
+//Query a raft command
+func (s *server) Query(rid uint64, command []byte) (resp []byte, err error) {
+
+	return
+}
+
+//Query a raft command
+func (s *server) Mutate(rid uint64, command []byte) (resp []byte, err error) {
+
+	return
+}
+
+//Query a raft command
+func (s *server) Status(rid uint64) (resp []byte, err error) {
+
+	return
 }

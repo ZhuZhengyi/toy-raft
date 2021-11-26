@@ -3,6 +3,7 @@
 package raft
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -17,30 +18,32 @@ var (
 	stopChanSignal = struct{}{}
 )
 
+//
 type raft struct {
-	config         *RaftConfig
-	id             uint64 // raft id
-	listener       net.Listener
-	stopc          chan struct{}       // stop signal chan
-	clientInC      chan reqSession     // request recv from client
-	peerInC        chan Message        // msg chan  recv from peer
-	peerOutC       chan Message        // msg send to peer
-	peerOutSession map[string]net.Conn //
-	transport      Transport           //
-	node           *RaftNode
-	ticker         *time.Ticker
-	smDriver       *InstDriver
-	reqSessions    map[ReqId]Session
+	config       *RaftConfig         //
+	id           uint64              // raft id
+	ticker       *time.Ticker        //
+	stopc        chan struct{}       // stop signal chan
+	clientInC    chan reqSession     // request recv from client
+	peerInC      chan Message        // msg chan  recv from peer
+	peerOutC     chan Message        // msg send to peer
+	peerSessions map[string]net.Conn //
+	peerListener net.Listener        //
+	transport    Transport           //
+	node         *RaftNode           //
+	smDriver     *InstDriver         //
+	reqSessions  map[ReqId]Session   //
+	cancelFunc   context.CancelFunc  //
 }
 
 //NewRaft allocate a new raft struct from heap and init it
 //return raft struct pointer
 func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
+	clientInC := make(chan reqSession, 64)
 	instC := make(chan Instruction, 64)
 	msgC := make(chan Message, 64)
 	peerInC := make(chan Message, 64)
 	peerOutC := make(chan Message, 64)
-	clientInC := make(chan reqSession, CLIENT_REQ_BATCH_SIZE)
 	node := NewRaftNode(uint64(config.ID), RoleFollower, logStore, instC, msgC)
 	instDriver := NewInstDriver(instC, msgC, sm)
 	peerSessions := make(map[string]net.Conn)
@@ -52,56 +55,79 @@ func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
 	}
 
 	r := &raft{
-		config:         config,
-		id:             uint64(config.ID),
-		stopc:          make(chan struct{}),
-		listener:       listener,
-		clientInC:      clientInC,
-		peerInC:        peerInC,
-		peerOutC:       peerOutC,
-		peerOutSession: peerSessions,
-		node:           node,
-		smDriver:       instDriver,
-		ticker:         time.NewTicker(TICK_INTERVAL_MS),
-		reqSessions:    make(map[ReqId]Session),
+		config:       config,
+		id:           uint64(config.ID),
+		stopc:        make(chan struct{}),
+		peerListener: listener,
+		clientInC:    clientInC,
+		peerInC:      peerInC,
+		peerOutC:     peerOutC,
+		peerSessions: peerSessions,
+		node:         node,
+		smDriver:     instDriver,
+		ticker:       time.NewTicker(TICK_INTERVAL_MS),
+		reqSessions:  make(map[ReqId]Session),
 	}
 
 	return r
 }
 
+//Serve serve raft engine
 func (r *raft) Serve() {
-	go r.smDriver.run()
-	go r.runPeerMsgOut()
-	go r.runPeerMsgIn(r.stopc)
-	go r.run()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	go r.smDriver.run(ctx)
+	go r.runPeerMsgOut(ctx)
+	go r.runPeerMsgIn(ctx)
+	go r.run(ctx)
 }
 
+//Stop stop raft
 func (r *raft) Stop() {
-	r.stopc <- struct{}{}
+	r.cancelFunc()
+	//r.stopc <- struct{}{}
 
-	r.smDriver.stop()
+	//r.smDriver.stop()
 }
 
-func (r *raft) run() {
+//Query query for read req raft
+func (r *raft) Query(command []byte) (resp []byte, err error) {
+
+	return
+}
+
+//Mutate
+func (r *raft) Mutate(command []byte) (resp []byte, err error) {
+
+	return
+}
+
+func (r *raft) Status(rid uint64) (resp []byte, err error) {
+
+	return
+}
+
+func (r *raft) run(ctx context.Context) {
 	for {
 		select {
-		case <-r.stopc:
+		case <-ctx.Done():
 			logger.Info("raft %v run stopped", r)
 			break
 		case <-r.ticker.C:
 			r.node.Tick()
 		case msg := <-r.peerInC:
 			r.node.Step(&msg)
-		case reqSession := <-r.clientInC:
-			msg := r.getReqMsg(reqSession.req, reqSession.session)
+		case clientReq := <-r.clientInC:
+			msg := r.makeClientMsg(clientReq.req, clientReq.session)
 			r.node.Step(msg)
 		case msg := <-r.node.msgC:
-			r.dispatch(msg)
+			r.dispatchTo(msg)
 		}
 	}
 }
 
-func (r *raft) dispatch(msg Message) {
+// dispatchTo message
+func (r *raft) dispatchTo(msg Message) {
 	switch msg.to.Type() {
 	case AddrTypePeer, AddrTypePeers:
 		r.peerOutC <- msg
@@ -114,24 +140,27 @@ func (r *raft) dispatch(msg Message) {
 	}
 }
 
-func (r *raft) pushReqSession(id ReqId, s Session) {
+//push session with reqid
+func (r *raft) pushClientSession(id ReqId, s Session) {
 	r.reqSessions[id] = s
 }
 
-func (r *raft) popReqSession(id ReqId) (s Session) {
+//
+func (r *raft) popClientSession(id ReqId) (s Session) {
 	s = r.reqSessions[id]
 	delete(r.reqSessions, id)
 	return
 }
 
+//
 func (r *raft) replyToClient(resp *EventClientResp) {
-	s := r.popReqSession(resp.id)
-	s.Send(resp.response)
+	s := r.popClientSession(resp.id)
+	s.Reply(resp.response)
 }
 
-func (r *raft) getReqMsg(req Request, session Session) (msg *Message) {
+func (r *raft) makeClientMsg(req Request, session Session) (msg *Message) {
 	clientReq := NewEventClientReq(req)
-	r.pushReqSession(clientReq.id, session)
+	r.pushClientSession(clientReq.id, session)
 	msg = NewMessage(&AddrClient{}, &AddrLocal{}, 0, clientReq)
 	return
 }

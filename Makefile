@@ -25,4 +25,8 @@ PHONY += test
 test:
 	@go test ./...
 
+PHONY += docs
+docs:
+	@godoc -http=:6060
+
 .phony: $(PHONY)

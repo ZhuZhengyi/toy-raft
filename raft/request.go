@@ -26,7 +26,7 @@ type Response interface {
 }
 
 type Session interface {
-	Send(Response)
+	Reply(Response)
 }
 
 var (
@@ -38,17 +38,21 @@ var (
 	_ Response = (*RespStatus)(nil)
 )
 
+//ReqQuery request for query
 type ReqQuery struct {
 	query []byte
 }
 
+//ReqMutate request for mutate
 type ReqMutate struct {
 	mutate []byte
 }
 
+//ReqStatus
 type ReqStatus struct {
 }
 
+//
 type RespStatus struct {
 }
 

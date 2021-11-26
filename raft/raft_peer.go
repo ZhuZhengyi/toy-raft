@@ -7,28 +7,33 @@ import (
 	"time"
 )
 
+func (r *raft) closePeerMsgIn() {
+	r.peerListener.Close()
+}
+
 // deal with peer in connect
-func (r *raft) runPeerMsgIn(stopC chan struct{}) {
+func (r *raft) runPeerMsgIn(ctx context.Context) {
+	subCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	for {
+		conn, err2 := r.peerListener.Accept()
+		if err2 != nil {
+			logger.Warn("listen tcp %v, error: %v\n", r.peerListener.Addr(), err2)
+			return
+		}
+
 		select {
-		case <-stopC:
-			logger.Info("doPeerRecv stopped")
+		case <-ctx.Done():
+			logger.Info("doPeerRecv stopped\n")
 			return
 		default:
 		}
-		conn, err2 := r.listener.Accept()
-		if err2 != nil {
-			logger.Fatal("listen tcp %v, error: %v", r.listener, err2)
-			return
-		}
 
-		ctx, _ := context.WithCancel(context.Background())
-
-		go r.doRecvFromConn(ctx, conn)
+		go r.doRecvFromConn(subCtx, conn)
 	}
 }
 
-func (r *raft) runPeerMsgOut() {
+func (r *raft) runPeerMsgOut(ctx context.Context) {
 	connTimeout := time.Duration(10)
 	//
 	for _, peer := range r.config.Peers {
@@ -36,14 +41,14 @@ func (r *raft) runPeerMsgOut() {
 		if err != nil {
 			logger.Error("connect peer(%v) error:%v\n", peer, err)
 		} else {
-			r.peerOutSession[peer] = peerConn
+			r.peerSessions[peer] = peerConn
 			logger.Info("get peer(%v) connection\n", peer)
 		}
 	}
 
 	for {
 		select {
-		case <-r.stopc:
+		case <-ctx.Done():
 			logger.Info("doPeerSend stopped\n")
 			return
 		case msg := <-r.peerOutC:
@@ -60,7 +65,7 @@ func (r *raft) doRecvFromConn(ctx context.Context, conn net.Conn) {
 			return
 		default:
 		}
-		msg := r.recvMsgFromPeer(conn)
+		msg := r.recvMsgFromPeer(ctx, conn)
 		r.peerInC <- *msg
 	}
 
@@ -89,7 +94,7 @@ func (r *raft) sendPeerMsg(msg *Message) {
 func (r *raft) sendMsgToPeer(msg *Message, peer string) {
 	msg.to = &AddrPeer{peer}
 	msg.from = AddressLocal
-	session := r.peerOutSession[peer]
+	session := r.peerSessions[peer]
 
 	msg.SendTo(session)
 
@@ -97,7 +102,7 @@ func (r *raft) sendMsgToPeer(msg *Message, peer string) {
 }
 
 // recv message from peer
-func (r *raft) recvMsgFromPeer(conn net.Conn) *Message {
+func (r *raft) recvMsgFromPeer(ctx context.Context, conn net.Conn) *Message {
 	msg := new(Message)
 	msg.RecvFrom(conn)
 	msg.to = AddressLocal

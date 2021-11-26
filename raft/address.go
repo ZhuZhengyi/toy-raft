@@ -26,11 +26,9 @@ type Address interface {
 	Unmarshal([]byte)
 }
 
-type AddrLocal struct {
-}
+type AddrLocal struct{}
 
-type AddrClient struct {
-}
+type AddrClient struct{}
 
 type AddrPeer struct {
 	peer string
@@ -41,9 +39,9 @@ type AddrPeers struct {
 }
 
 var (
-	AddressLocal  = new(AddrLocal)
-	AddressClient = new(AddrClient)
-	AddressPeers  = new(AddrPeers)
+	AddressLocal  = &AddrLocal{}
+	AddressClient = &AddrClient{}
+	AddressPeers  = &AddrPeers{}
 )
 
 func (a *AddrLocal) String() string {
@@ -126,7 +124,7 @@ func (a *AddrClient) Unmarshal(data []byte) {
 		logger.Warn("unmarshal %v error: %v", a, err)
 	}
 	if ad != AddrTypeClient {
-		logger.Warn("unmarshal %v type error: %v", a, ad)
+		logger.Warn("unmarshal %v type: %v\n", a, ad)
 	}
 }
 
@@ -138,7 +136,7 @@ func (a *AddrPeer) Unmarshal(data []byte) {
 		logger.Warn("unmarshal %v error: %v", a, err)
 	}
 	if ad != AddrTypePeer {
-		logger.Warn("unmarshal %v type error: %v", a, ad)
+		logger.Warn("unmarshal %v type : %v", a, ad)
 	}
 }
 

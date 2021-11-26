@@ -1,6 +1,8 @@
 //
 package raft
 
+import "context"
+
 type InstDriver struct {
 	stopC chan struct{}
 	instC chan Instruction
@@ -19,10 +21,10 @@ func NewInstDriver(instC chan Instruction, msgC chan Message, sm InstStateMachin
 	}
 }
 
-func (d *InstDriver) run() {
+func (d *InstDriver) run(ctx context.Context) {
 	for {
 		select {
-		case <-d.stopC:
+		case <-ctx.Done():
 			break
 		case i := <-d.instC:
 			d.execute(i)

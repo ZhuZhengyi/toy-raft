@@ -31,7 +31,7 @@ func NewMessage(from, to Address, term uint64, event MsgEvent) *Message {
 }
 
 //EventType msg event type
-func (m *Message) EventType() EventType {
+func (m *Message) EventType() MsgEventType {
 	if m.event != nil {
 		return m.event.Type()
 	}
@@ -72,7 +72,7 @@ func (m *Message) Unmarshal(data []byte) error {
 		return err
 	}
 
-	var msgEventType EventType
+	var msgEventType MsgEventType
 	binary.Read(buffer, binary.BigEndian, &msgEventType)
 	m.event = NewMsgEvent(msgEventType)
 

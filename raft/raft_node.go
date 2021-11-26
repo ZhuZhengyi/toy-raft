@@ -6,7 +6,7 @@ import "fmt"
 type RaftNode struct {
 	id         uint64
 	term       uint64
-	instC      chan Instruction
+	instC      chan Instruction //
 	msgC       chan Message
 	log        *RaftLog
 	queuedReqs []queuedEvent

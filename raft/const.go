@@ -5,8 +5,8 @@ package raft
 import "time"
 
 const (
-	CONF_DEF_LISTEN_PORT   = 211017
-	CONF_DEF_PEER_TCP_PORT = 211018
+	DEF_LISTEN_PORT   = 211017
+	DEF_PEER_TCP_PORT = 211018
 )
 
 const (

@@ -34,8 +34,6 @@ func NewFileLogger(filePath string) *FileLogger {
 		return nil
 	}
 
-	//os.OpenFile(filePath, "", 0644)
-
 	return &FileLogger{
 		debug:  log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile),
 		info:   log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),

@@ -3,18 +3,20 @@ package raft
 
 //go:generate stringer -type=InstType
 
-type InstType int16
+type InstType int16 // Instruction type
 
 const (
-	InstTypeUnkown InstType = -1
-	InstTypeAbort  InstType = iota
-	InstTypeApply
-	InstTypeNotify
-	InstTypeQuery
-	InstTypeStatus
-	InstTypeVote
+	InstTypeUnkown InstType = -1   // Unknown Instruction
+	InstTypeAbort  InstType = iota // Abort
+	InstTypeApply                  //
+	InstTypeNotify                 //
+	InstTypeQuery                  //
+	InstTypeStatus                 //
+	InstTypeVote                   //
 )
 
+//Instruction: represent some data which outer client send to rsm
+// to drive rsm to run
 type Instruction interface {
 	Type() InstType
 }
@@ -55,6 +57,7 @@ type InstStatus struct {
 	command []byte
 }
 
+//
 type InstVote struct {
 	term  uint64
 	index uint64

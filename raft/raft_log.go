@@ -19,12 +19,12 @@ const (
 //                   ^
 //                applied
 type LogStore interface {
-	Append([]Entry)                      // append entries to store
-	Get(index uint64) *Entry             //
-	AppliedIndex() uint64                // get applied entry index from store
-	LastIndexTerm() (index, term uint64) //
-	StoreMetaData(key LogMetaKey, data []byte)
-	LoadMetaData(key LogMetaKey) []byte
+	Append([]Entry)                            // append entries to store
+	Get(index uint64) *Entry                   //
+	AppliedIndex() uint64                      // get applied entry index from store
+	LastIndexTerm() (index, term uint64)       //
+	StoreMetaData(key LogMetaKey, data []byte) //
+	LoadMetaData(key LogMetaKey) []byte        //
 }
 
 //RaftLog raft log

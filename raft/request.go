@@ -17,6 +17,7 @@ const (
 	RespTypeState                  // RespState
 )
 
+//Request represent
 type Request interface {
 	Type() ReqType
 }

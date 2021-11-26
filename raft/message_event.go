@@ -8,28 +8,28 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate stringer -type=EventType  -linecomment
+//go:generate stringer -type=MsgEventType  -linecomment
 
 type ReqId = uuid.UUID
-type EventType int32
+type MsgEventType int32
 
 const (
-	EventTypeUnkown            EventType = -1   // EventUknown
-	EventTypeHeartbeatReq      EventType = iota // EventHeartbeatReq
-	EventTypeHeartbeatResp                      // EventHeartbeatResponse
-	EventTypeClientReq                          // EventClientReq
-	EventTypeClientResp                         // EventClientResponse
-	EventTypeVoteReq                            // EventVoteReq
-	EventTypeVoteResp                           // EventVoteResponse
-	EventTypeAppendEntriesReq                   // EventAppendEntriesReq
-	EventTypeAcceptEntriesResp                  // EventAcceptEntriesResponse
-	EventTypeRefuseEntriesResp                  // EventRefuseEntriesResponse
-	EventTypeInstallSnapReq                     // EventInstallSnapshot
+	EventTypeUnkown            MsgEventType = -1   // EventUknown
+	EventTypeHeartbeatReq      MsgEventType = iota // EventHeartbeatReq
+	EventTypeHeartbeatResp                         // EventHeartbeatResponse
+	EventTypeClientReq                             // EventClientReq
+	EventTypeClientResp                            // EventClientResponse
+	EventTypeVoteReq                               // EventVoteReq
+	EventTypeVoteResp                              // EventVoteResponse
+	EventTypeAppendEntriesReq                      // EventAppendEntriesReq
+	EventTypeAcceptEntriesResp                     // EventAcceptEntriesResponse
+	EventTypeRefuseEntriesResp                     // EventRefuseEntriesResponse
+	EventTypeInstallSnapReq                        // EventInstallSnapshot
 )
 
 //MsgEvent message event
 type MsgEvent interface {
-	Type() EventType
+	Type() MsgEventType
 	Size() uint64
 	Marshal() []byte
 	Unmarshal(data []byte) error
@@ -40,7 +40,7 @@ type queuedEvent struct {
 	event MsgEvent
 }
 
-func (e *queuedEvent) EventType() EventType {
+func (e *queuedEvent) EventType() MsgEventType {
 	if e.event != nil {
 		return e.event.Type()
 
@@ -64,7 +64,7 @@ var (
 )
 
 //NewMsgEvent allocate a new MsgEvent by eventType
-func NewMsgEvent(eventType EventType) MsgEvent {
+func NewMsgEvent(eventType MsgEventType) MsgEvent {
 	switch eventType {
 	case EventTypeHeartbeatReq:
 		return new(EventHeartbeatReq)

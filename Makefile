@@ -6,7 +6,7 @@
 BUILD_TARGETS := build/toy-raft
 
 PHONY := all
-all: test build
+all: generate test build
 	@echo "make all done"
 
 PHONY += generate

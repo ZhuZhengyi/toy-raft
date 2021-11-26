@@ -76,7 +76,7 @@ func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
 func (r *raft) Serve() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
-	go r.smDriver.run(ctx)
+	go r.smDriver.Run(ctx)
 	go r.runPeerMsgOut(ctx)
 	go r.runPeerMsgIn(ctx)
 	go r.run(ctx)

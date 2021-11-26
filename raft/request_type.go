@@ -1,4 +1,5 @@
 // request.go
+
 package raft
 
 func (r *ReqQuery) Type() ReqType {

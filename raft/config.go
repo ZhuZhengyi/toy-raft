@@ -17,10 +17,9 @@ type LoggerConfig struct {
 
 //RaftConfig raft config
 type RaftConfig struct {
-	ID               int      `yaml:"Id"`
-	ServerListenPort int      `yaml:"ListenPort"`  //
-	PeerTcpPort      int      `yaml:"PeerTcpPort"` //
-	Peers            []string `yaml:"Peers"`
+	ID          int      `yaml:"Id"`
+	PeerTcpPort int      `yaml:"PeerTcpPort"` //
+	Peers       []string `yaml:"Peers"`
 }
 
 //Config
@@ -38,8 +37,7 @@ var (
 func DefaultConfig() *Config {
 	return &Config{
 		Raft: RaftConfig{
-			ServerListenPort: CONF_DEF_LISTEN_PORT,
-			PeerTcpPort:      CONF_DEF_PEER_TCP_PORT,
+			PeerTcpPort: DEF_PEER_TCP_PORT,
 		},
 	}
 }

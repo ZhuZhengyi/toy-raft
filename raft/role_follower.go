@@ -38,8 +38,8 @@ func (f *Follower) Step(msg *Message) {
 		atomic.StoreInt64(&f.leaderSeenTicks, 0)
 	}
 
-	switch msg.EventType() {
-	case EventTypeHeartbeatReq:
+	switch msg.MsgType() {
+	case MsgTypeHeartbeatReq:
 		if f.isFromLeader(msg.from) {
 			hbReq := msg.event.(*EventHeartbeatReq)
 			hasCommitted := f.log.Has(hbReq.commitIndex, hbReq.commitTerm)
@@ -53,15 +53,15 @@ func (f *Follower) Step(msg *Message) {
 				}
 			}
 		}
-	case EventTypeVoteReq:
+	case MsgTypeVoteReq:
 		//TODO:
-	case EventTypeAppendEntriesReq:
+	case MsgTypeAppendEntriesReq:
 		//TODO:
-	case EventTypeClientReq:
+	case MsgTypeClientReq:
 		//TODO:
-	case EventTypeClientResp:
+	case MsgTypeClientResp:
 		//TODO:
-	case EventTypeVoteResp:
+	case MsgTypeVoteResp:
 		//TODO:
 	default:
 		logger.Warn("role(%v) received unexpected message(%v)\n", f, msg)

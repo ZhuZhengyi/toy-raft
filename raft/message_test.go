@@ -15,7 +15,7 @@ func (msg1 *Message) equalTo(msg2 *Message) bool {
 	return msg1.from == msg2.from &&
 		msg1.to == msg2.to &&
 		msg1.term == msg2.term &&
-		msg1.EventType() == msg2.EventType()
+		msg1.MsgType() == msg2.MsgType()
 }
 
 func TestMessage(t *testing.T) {

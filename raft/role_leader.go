@@ -37,18 +37,18 @@ func (l *Leader) Type() RoleType {
 
 //Step step rsm by msg
 func (l *Leader) Step(msg *Message) {
-	switch msg.EventType() {
-	case EventTypeHeartbeatResp:
+	switch msg.MsgType() {
+	case MsgTypeHeartbeatResp:
 		//TODO:
-	case EventTypeAcceptEntriesResp:
+	case MsgTypeAcceptEntriesResp:
 		//TODO:
-	case EventTypeRefuseEntriesResp:
+	case MsgTypeRefuseEntriesResp:
 		//TODO:
-	case EventTypeClientReq:
+	case MsgTypeClientReq:
 		//TODO:
-	case EventTypeClientResp:
+	case MsgTypeClientResp:
 		//TODO:
-	case EventTypeVoteReq, EventTypeVoteResp:
+	case MsgTypeVoteReq, MsgTypeVoteResp:
 		{
 		}
 	default:

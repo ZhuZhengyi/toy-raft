@@ -1,37 +1,37 @@
 package raft
 
-func (e *EventHeartbeatReq) Type() MsgEventType {
-	return EventTypeHeartbeatReq
+func (e *EventHeartbeatReq) Type() MsgType {
+	return MsgTypeHeartbeatReq
 }
 
-func (e *EventHeartbeatResp) Type() MsgEventType {
-	return EventTypeHeartbeatResp
+func (e *EventHeartbeatResp) Type() MsgType {
+	return MsgTypeHeartbeatResp
 }
 
-func (e *EventClientReq) Type() MsgEventType {
-	return EventTypeClientReq
+func (e *EventClientReq) Type() MsgType {
+	return MsgTypeClientReq
 }
 
-func (e *EventClientResp) Type() MsgEventType {
-	return EventTypeClientResp
+func (e *EventClientResp) Type() MsgType {
+	return MsgTypeClientResp
 }
 
-func (e *EventSolicitVoteReq) Type() MsgEventType {
-	return EventTypeVoteReq
+func (e *EventSolicitVoteReq) Type() MsgType {
+	return MsgTypeVoteReq
 }
 
-func (e *EventGrantVoteResp) Type() MsgEventType {
-	return EventTypeVoteResp
+func (e *EventGrantVoteResp) Type() MsgType {
+	return MsgTypeVoteResp
 }
 
-func (e *EventAppendEntriesReq) Type() MsgEventType {
-	return EventTypeAppendEntriesReq
+func (e *EventAppendEntriesReq) Type() MsgType {
+	return MsgTypeAppendEntriesReq
 }
 
-func (e *EventAcceptEntriesResp) Type() MsgEventType {
-	return EventTypeAcceptEntriesResp
+func (e *EventAcceptEntriesResp) Type() MsgType {
+	return MsgTypeAcceptEntriesResp
 }
 
-func (e *EventRefuseEntriesResp) Type() MsgEventType {
-	return EventTypeRefuseEntriesResp
+func (e *EventRefuseEntriesResp) Type() MsgType {
+	return MsgTypeRefuseEntriesResp
 }

@@ -145,7 +145,7 @@ func (node *RaftNode) forwardToLeaderQueued(leader Address) {
 		return
 	}
 	for _, queueReq := range node.queuedReqs {
-		if queueReq.EventType() != EventTypeClientReq {
+		if queueReq.MsgType() != MsgTypeClientReq {
 			logger.Warn("forward req(%v) \n", queueReq)
 			continue
 		}

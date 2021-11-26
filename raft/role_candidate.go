@@ -34,13 +34,13 @@ func (c *Candidate) Type() RoleType {
 //Step step candidate state by msg
 func (c *Candidate) Step(msg *Message) {
 	switch msg.event.Type() {
-	case EventTypeHeartbeatReq:
+	case MsgTypeHeartbeatReq:
 		if msg.from.Type() == AddrTypePeer {
 			from := msg.from.(*AddrPeer)
 			c.becomeFollower(msg.term, from.peer).Step(msg)
 			return
 		}
-	case EventTypeVoteResp:
+	case MsgTypeVoteResp:
 		c.votedCount++
 		if c.votedCount >= c.quorum() {
 			node := c.becomeLeader()
@@ -53,15 +53,15 @@ func (c *Candidate) Step(msg *Message) {
 				})
 			}
 		}
-	case EventTypeClientReq:
+	case MsgTypeClientReq:
 		c.queuedReqs = append(c.queuedReqs, queuedEvent{msg.from, msg.event})
-	case EventTypeClientResp:
+	case MsgTypeClientResp:
 		event := msg.event.(*EventClientResp)
 		if event.response.Type() == RespTypeStatus {
 		}
 		delete(c.proxyReqs, event.id)
 		c.send(AddressClient, &EventClientResp{event.id, event.response})
-	case EventTypeVoteReq:
+	case MsgTypeVoteReq:
 	default:
 		logger.Warn("RaftRole(%v) reciev error msg: (%v)\n", c, msg)
 	}

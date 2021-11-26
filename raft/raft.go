@@ -132,7 +132,7 @@ func (r *raft) dispatchTo(msg Message) {
 	case AddrTypePeer, AddrTypePeers:
 		r.peerOutC <- msg
 	case AddrTypeClient:
-		if msg.EventType() == EventTypeClientResp {
+		if msg.MsgType() == MsgTypeClientResp {
 			r.replyToClient(msg.event.(*EventClientResp))
 		}
 	default:

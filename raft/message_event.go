@@ -8,28 +8,28 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate stringer -type=MsgEventType  -linecomment
+//go:generate stringer -type=MsgType  -linecomment
 
 type ReqId = uuid.UUID
-type MsgEventType int32
+type MsgType int32
 
 const (
-	EventTypeUnkown            MsgEventType = -1   // EventUknown
-	EventTypeHeartbeatReq      MsgEventType = iota // EventHeartbeatReq
-	EventTypeHeartbeatResp                         // EventHeartbeatResponse
-	EventTypeClientReq                             // EventClientReq
-	EventTypeClientResp                            // EventClientResponse
-	EventTypeVoteReq                               // EventVoteReq
-	EventTypeVoteResp                              // EventVoteResponse
-	EventTypeAppendEntriesReq                      // EventAppendEntriesReq
-	EventTypeAcceptEntriesResp                     // EventAcceptEntriesResponse
-	EventTypeRefuseEntriesResp                     // EventRefuseEntriesResponse
-	EventTypeInstallSnapReq                        // EventInstallSnapshot
+	MsgTypeUnkown            MsgType = -1   // EventUknown
+	MsgTypeHeartbeatReq      MsgType = iota // EventHeartbeatReq
+	MsgTypeHeartbeatResp                    // EventHeartbeatResponse
+	MsgTypeClientReq                        // EventClientReq
+	MsgTypeClientResp                       // EventClientResponse
+	MsgTypeVoteReq                          // EventVoteReq
+	MsgTypeVoteResp                         // EventVoteResponse
+	MsgTypeAppendEntriesReq                 // EventAppendEntriesReq
+	MsgTypeAcceptEntriesResp                // EventAcceptEntriesResponse
+	MsgTypeRefuseEntriesResp                // EventRefuseEntriesResponse
+	MsgTypeInstallSnapReq                   // EventInstallSnapshot
 )
 
 //MsgEvent message event
 type MsgEvent interface {
-	Type() MsgEventType
+	Type() MsgType
 	Size() uint64
 	Marshal() []byte
 	Unmarshal(data []byte) error
@@ -40,12 +40,12 @@ type queuedEvent struct {
 	event MsgEvent
 }
 
-func (e *queuedEvent) EventType() MsgEventType {
+func (e *queuedEvent) MsgType() MsgType {
 	if e.event != nil {
 		return e.event.Type()
 
 	}
-	return EventTypeUnkown
+	return MsgTypeUnkown
 
 }
 
@@ -64,23 +64,23 @@ var (
 )
 
 //NewMsgEvent allocate a new MsgEvent by eventType
-func NewMsgEvent(eventType MsgEventType) MsgEvent {
+func NewMsgEvent(eventType MsgType) MsgEvent {
 	switch eventType {
-	case EventTypeHeartbeatReq:
+	case MsgTypeHeartbeatReq:
 		return new(EventHeartbeatReq)
-	case EventTypeHeartbeatResp:
+	case MsgTypeHeartbeatResp:
 		return new(EventHeartbeatResp)
-	case EventTypeVoteReq:
+	case MsgTypeVoteReq:
 		return new(EventSolicitVoteReq)
-	case EventTypeVoteResp:
+	case MsgTypeVoteResp:
 		return new(EventGrantVoteResp)
-	case EventTypeClientReq:
+	case MsgTypeClientReq:
 		return new(EventClientResp)
-	case EventTypeAppendEntriesReq:
+	case MsgTypeAppendEntriesReq:
 		return new(EventAppendEntriesReq)
-	case EventTypeAcceptEntriesResp:
+	case MsgTypeAcceptEntriesResp:
 		return new(EventAcceptEntriesResp)
-	case EventTypeRefuseEntriesResp:
+	case MsgTypeRefuseEntriesResp:
 		return new(EventRefuseEntriesResp)
 	default:
 		return new(EventHeartbeatReq)
@@ -106,6 +106,7 @@ type EventSolicitVoteReq struct {
 type EventGrantVoteResp struct {
 }
 
+//
 type EventClientReq struct {
 	id      ReqId
 	request Request

@@ -30,12 +30,12 @@ func NewMessage(from, to Address, term uint64, event MsgEvent) *Message {
 	}
 }
 
-//EventType msg event type
-func (m *Message) EventType() MsgEventType {
+//MsgType msg event type
+func (m *Message) MsgType() MsgType {
 	if m.event != nil {
 		return m.event.Type()
 	}
-	return EventTypeUnkown
+	return MsgTypeUnkown
 }
 
 //String
@@ -47,7 +47,7 @@ func (m *Message) String() string {
 //Size message byte size with marshal
 func (m *Message) Size() uint64 {
 	return uint64(unsafe.Sizeof(m.term)) +
-		uint64(unsafe.Sizeof(m.EventType())) +
+		uint64(unsafe.Sizeof(m.MsgType())) +
 		m.event.Size()
 }
 
@@ -58,7 +58,7 @@ func (m *Message) Marshal() []byte {
 
 	buffer := bytes.NewBuffer(datas)
 	binary.Write(buffer, binary.BigEndian, m.term)
-	binary.Write(buffer, binary.BigEndian, m.EventType())
+	binary.Write(buffer, binary.BigEndian, m.MsgType())
 	binary.Write(buffer, binary.BigEndian, m.event.Marshal())
 	return buffer.Bytes()
 }
@@ -72,9 +72,9 @@ func (m *Message) Unmarshal(data []byte) error {
 		return err
 	}
 
-	var msgEventType MsgEventType
-	binary.Read(buffer, binary.BigEndian, &msgEventType)
-	m.event = NewMsgEvent(msgEventType)
+	var msgMsgType MsgType
+	binary.Read(buffer, binary.BigEndian, &msgMsgType)
+	m.event = NewMsgEvent(msgMsgType)
 
 	return m.event.Unmarshal(data[8:])
 }

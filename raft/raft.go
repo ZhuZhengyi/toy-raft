@@ -29,11 +29,14 @@ type raft struct {
 	peerOutC     chan Message        // msg send to peer
 	peerSessions map[string]net.Conn //
 	peerListener net.Listener        //
-	transport    Transport           //
 	node         *RaftNode           //
 	smDriver     *InstDriver         //
 	reqSessions  map[ReqId]Session   //
 	cancelFunc   context.CancelFunc  //
+}
+
+func (r *raft) String() string {
+	return fmt.Sprintf("raft{id: %v, port: %v, role: %v}", r.id, r.config.PeerTcpPort, r.node)
 }
 
 //NewRaft allocate a new raft struct from heap and init it
@@ -73,9 +76,10 @@ func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
 }
 
 //Serve serve raft engine
-func (r *raft) Serve() {
+func (r *raft) Start() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
+	r.cancelFunc = cancelFunc
+
 	go r.smDriver.Run(ctx)
 	go r.runPeerMsgOut(ctx)
 	go r.runPeerMsgIn(ctx)
@@ -85,9 +89,6 @@ func (r *raft) Serve() {
 //Stop stop raft
 func (r *raft) Stop() {
 	r.cancelFunc()
-	//r.stopc <- struct{}{}
-
-	//r.smDriver.stop()
 }
 
 //Query query for read req raft

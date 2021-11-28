@@ -47,7 +47,7 @@ func NewRaftNode(id uint64,
 }
 
 func (node *RaftNode) String() string {
-	return fmt.Sprintf("Node(%v) term(%v) role(%v)", node.id, node.term, node.RoleType())
+	return fmt.Sprintf("[id(%v) term(%v) role(%v)]", node.id, node.term, node.RoleType())
 }
 
 //RoleType get raftnode role type
@@ -121,6 +121,7 @@ func (node *RaftNode) becomeLeader() *RaftNode {
 	return node
 }
 
+//append command
 func (node *RaftNode) appendAndCastCommand(command []byte) {
 	entry := node.log.Append(node.term, command)
 

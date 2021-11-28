@@ -65,11 +65,11 @@ type StdLogger struct {
 func NewStdLogger(logLevel LogLevel) *StdLogger {
 	return &StdLogger{
 		logLevel: logLevel,
-		debug:    log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile),
-		info:     log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
-		warn:     log.New(os.Stdout, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile),
-		errorl:   log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
-		fatal:    log.New(os.Stderr, "FATAL: ", log.Ldate|log.Ltime|log.Lshortfile),
+		debug:    log.New(os.Stdout, "DEBUG ", log.Ldate|log.Ltime|log.Lshortfile),
+		info:     log.New(os.Stdout, "INFO ", log.Ldate|log.Ltime|log.Lshortfile),
+		warn:     log.New(os.Stdout, "WARN ", log.Ldate|log.Ltime|log.Lshortfile),
+		errorl:   log.New(os.Stderr, "ERROR ", log.Ldate|log.Ltime|log.Lshortfile),
+		fatal:    log.New(os.Stderr, "FATAL ", log.Ldate|log.Ltime|log.Lshortfile),
 	}
 }
 
@@ -81,35 +81,35 @@ func (l *StdLogger) Info(format string, v ...interface{}) {
 	if l.logLevel > LogLevelInfo {
 		return
 	}
-	l.info.Printf(format, v...)
+	l.info.Output(2, fmt.Sprintf(format, v...))
 }
 
 func (l *StdLogger) Debug(format string, v ...interface{}) {
 	if l.logLevel > LogLevelDebug {
 		return
 	}
-	l.debug.Printf(format, v...)
+	l.debug.Output(2, fmt.Sprintf(format, v...))
 }
 
 func (l *StdLogger) Warn(format string, v ...interface{}) {
 	if l.logLevel > LogLevelWarn {
 		return
 	}
-	l.warn.Printf(format, v...)
+	l.warn.Output(2, fmt.Sprintf(format, v...))
 }
 
 func (l *StdLogger) Error(format string, v ...interface{}) {
 	if l.logLevel > LogLevelError {
 		return
 	}
-	l.errorl.Printf(format, v...)
+	l.errorl.Output(2, fmt.Sprintf(format, v...))
 }
 
 func (l *StdLogger) Fatal(format string, v ...interface{}) {
 	if l.logLevel > LogLevelFatal {
 		return
 	}
-	l.fatal.Printf(format, v...)
+	l.fatal.Output(2, fmt.Sprintf(format, v...))
 
 	panic(fmt.Sprintf(format, v...))
 }

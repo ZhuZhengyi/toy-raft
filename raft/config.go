@@ -44,13 +44,13 @@ func DefaultConfig() *Config {
 
 //LoadConfig load config from configPath
 func LoadConfig(configPath string) (*Config, error) {
-	config := DefaultConfig()
 	confYaml, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		logger.Fatal("config file %v error: %v", *configFile, err)
 		return nil, err
 	}
 
+	config := DefaultConfig()
 	err = yaml.Unmarshal(confYaml, config)
 	if err != nil {
 		logger.Fatal("config file %v error: %v", *configFile, err)

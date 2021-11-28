@@ -18,7 +18,7 @@ func NewServer(confPath string, logStore LogStore, sm InstStateMachine) *server 
 }
 
 func (s *server) Start() {
-	s.raft.Serve()
+	s.raft.Start()
 }
 
 func (s *server) Stop() {

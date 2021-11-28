@@ -13,7 +13,15 @@ func TestRaft(t *testing.T) {
 	r2 := NewRaft(config2, NewMemLogStore(), new(DummyInstStateMachine))
 	r3 := NewRaft(config3, NewMemLogStore(), new(DummyInstStateMachine))
 
-	r1.Serve()
-	r2.Serve()
-	r3.Serve()
+	r1.Start()
+	t.Logf("%v start\n", r1)
+	r2.Start()
+	t.Logf("%v start\n", r2)
+	r3.Start()
+	t.Logf("%v start\n", r3)
+
+	defer r1.Stop()
+	defer r2.Stop()
+	defer r3.Stop()
+
 }

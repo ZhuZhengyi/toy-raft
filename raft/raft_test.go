@@ -2,7 +2,10 @@
 
 package raft
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestRaft(t *testing.T) {
 	config1 := &RaftConfig{ID: 1, PeerTcpPort: 18551, Peers: []string{"127.0.0.1:18552", "127.0.0.1:18553"}}
@@ -13,15 +16,14 @@ func TestRaft(t *testing.T) {
 	r2 := NewRaft(config2, NewMemLogStore(), new(DummyInstStateMachine))
 	r3 := NewRaft(config3, NewMemLogStore(), new(DummyInstStateMachine))
 
-	r1.Start()
-	t.Logf("%v start\n", r1)
-	r2.Start()
-	t.Logf("%v start\n", r2)
-	r3.Start()
-	t.Logf("%v start\n", r3)
+	go r1.Start()
+	go r2.Start()
+	go r3.Start()
 
 	defer r1.Stop()
 	defer r2.Stop()
 	defer r3.Stop()
+
+	time.Sleep(60 * time.Second)
 
 }

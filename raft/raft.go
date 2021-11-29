@@ -36,7 +36,7 @@ type raft struct {
 }
 
 func (r *raft) String() string {
-	return fmt.Sprintf("raft{id: %v, port: %v, role: %v}", r.id, r.config.PeerTcpPort, r.node)
+	return fmt.Sprintf("{node: %v, port: %v}", r.node, r.config.PeerTcpPort)
 }
 
 //NewRaft allocate a new raft struct from heap and init it
@@ -72,6 +72,8 @@ func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
 		reqSessions:  make(map[ReqId]Session),
 	}
 
+	logger.Info("raft: %v listen at %v \n", r, r.peerListener.Addr())
+
 	return r
 }
 
@@ -88,7 +90,7 @@ func (r *raft) Start() {
 
 //Stop stop raft
 func (r *raft) Stop() {
-	r.cancelFunc()
+	//r.cancelFunc()
 }
 
 //Query query for read req raft

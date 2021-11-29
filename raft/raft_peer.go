@@ -22,6 +22,8 @@ func (r *raft) runPeerMsgIn(ctx context.Context) {
 			return
 		}
 
+		logger.Info("raft(%v) get connect from %v \n", r, conn.RemoteAddr())
+
 		select {
 		case <-ctx.Done():
 			logger.Info("doPeerRecv stopped\n")
@@ -37,12 +39,16 @@ func (r *raft) runPeerMsgOut(ctx context.Context) {
 	connTimeout := time.Duration(10)
 	//
 	for _, peer := range r.config.Peers {
-		peerConn, err := net.DialTimeout("tcp", peer, connTimeout)
-		if err != nil {
-			logger.Error("connect peer(%v) error:%v\n", peer, err)
-		} else {
-			r.peerSessions[peer] = peerConn
-			logger.Info("get peer(%v) connection\n", peer)
+		for i := 0; i < PEER_CONNECT_TRY_TIMES; i++ {
+			peerConn, err := net.DialTimeout("tcp", peer, connTimeout)
+			if err != nil {
+				logger.Error("raft: %v connect to peer(%v) error:%v\n", r, peer, err)
+				time.Sleep(PEER_CONNECT_TRY_SLEEP_INTERVAL)
+			} else {
+				r.peerSessions[peer] = peerConn
+				logger.Info("get peer(%v) connection\n", peer)
+				break
+			}
 		}
 	}
 

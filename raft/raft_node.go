@@ -47,7 +47,7 @@ func NewRaftNode(id uint64,
 }
 
 func (node *RaftNode) String() string {
-	return fmt.Sprintf("[id(%v) term(%v) role(%v)]", node.id, node.term, node.RoleType())
+	return fmt.Sprintf("{id: %v, term: %v, role: %v}", node.id, node.term, node.RoleType())
 }
 
 //RoleType get raftnode role type
@@ -76,7 +76,7 @@ func (node *RaftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
 
 func (node *RaftNode) becomeCandidate() {
 	if node.RoleType() != RoleFollower {
-		logger.Error("Node(%v) becomeCandidate \n", node)
+		//logger.Error("Node(%v) becomeCandidate \n", node)
 		return
 	}
 	node.term++
@@ -147,7 +147,7 @@ func (node *RaftNode) forwardToLeaderQueued(leader Address) {
 	}
 	for _, queueReq := range node.queuedReqs {
 		if queueReq.MsgType() != MsgTypeClientReq {
-			logger.Warn("forward req(%v) \n", queueReq)
+			//logger.Warn("forward req(%v) \n", queueReq)
 			continue
 		}
 		originEvent := queueReq.event.(*EventClientReq)

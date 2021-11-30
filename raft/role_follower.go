@@ -1,6 +1,9 @@
 package raft
 
-import "sync/atomic"
+import (
+	"fmt"
+	"sync/atomic"
+)
 
 //Follower a follower raft role
 type Follower struct {
@@ -29,6 +32,11 @@ func NewFollower(node *RaftNode) *Follower {
 //Type raft role type
 func (f *Follower) Type() RoleType {
 	return RoleFollower
+}
+
+func (f *Follower) String() string {
+	return fmt.Sprintf("{id: %v, term: %v, role: %v, leader: %v, leaderSeenTicks: %v}",
+		f.id, f.term, f.RoleType(), f.leader, f.leaderSeenTicks)
 }
 
 //Step a message with rsm
@@ -72,6 +80,7 @@ func (f *Follower) Step(msg *Message) {
 func (f *Follower) Tick() {
 	atomic.AddInt64(&f.leaderSeenTicks, 1)
 	if atomic.LoadInt64(&f.leaderSeenTicks) >= f.leaderSeenTimeout {
+		logger.Info("%v elect tick timeout, becomeCandidate\n", f)
 		atomic.StoreInt64(&f.leaderSeenTicks, 0)
 		f.becomeCandidate()
 	}

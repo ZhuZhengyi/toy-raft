@@ -3,6 +3,7 @@ package raft
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 )
@@ -15,6 +16,17 @@ func (r *raft) closePeerMsgIn() {
 func (r *raft) runPeerMsgIn(ctx context.Context) {
 	subCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", r.config.PeerTcpPort))
+	if err != nil {
+		logger.Fatal("listen tcp %v", r.config.PeerTcpPort)
+		return
+	}
+	r.peerListener = listener
+	logger.Info("raft: %v listen at %v \n", r, r.peerListener.Addr())
+
+	defer r.peerListener.Close()
+
 	for {
 		conn, err2 := r.peerListener.Accept()
 		if err2 != nil {
@@ -36,15 +48,14 @@ func (r *raft) runPeerMsgIn(ctx context.Context) {
 }
 
 func (r *raft) runPeerMsgOut(ctx context.Context) {
-	connTimeout := time.Duration(10)
-	//
 	for _, peer := range r.config.Peers {
 		for i := 0; i < PEER_CONNECT_TRY_TIMES; i++ {
-			peerConn, err := net.DialTimeout("tcp", peer, connTimeout)
+			peerConn, err := net.DialTimeout("tcp", peer, PEER_CONNECT_TIMEOUT)
 			if err != nil {
 				logger.Error("raft: %v connect to peer(%v) error:%v\n", r, peer, err)
 				time.Sleep(PEER_CONNECT_TRY_SLEEP_INTERVAL)
 			} else {
+				r.node.peers = append(r.node.peers, peer)
 				r.peerSessions[peer] = peerConn
 				logger.Info("get peer(%v) connection\n", peer)
 				break
@@ -58,7 +69,7 @@ func (r *raft) runPeerMsgOut(ctx context.Context) {
 			logger.Info("doPeerSend stopped\n")
 			return
 		case msg := <-r.peerOutC:
-			r.sendPeerMsg(&msg)
+			r.sendPeerMsg(msg)
 		}
 	}
 }
@@ -72,13 +83,14 @@ func (r *raft) doRecvFromConn(ctx context.Context, conn net.Conn) {
 		default:
 		}
 		msg := r.recvMsgFromPeer(ctx, conn)
-		r.peerInC <- *msg
+		r.peerInC <- msg
 	}
 
 }
 
 func (r *raft) sendPeerMsg(msg *Message) {
-	if msg.to.Type() != AddrTypePeer || msg.to.Type() != AddrTypePeers {
+	if msg.to.Type() != AddrTypePeer && msg.to.Type() != AddrTypePeers {
+		logger.Warn("sentToPeer invalid msg: %v\n", msg)
 		return
 	}
 
@@ -104,6 +116,7 @@ func (r *raft) sendMsgToPeer(msg *Message, peer string) {
 
 	msg.SendTo(session)
 
+	logger.Debug("send msg %v", msg)
 	//putMessage(msg)
 }
 
@@ -114,6 +127,8 @@ func (r *raft) recvMsgFromPeer(ctx context.Context, conn net.Conn) *Message {
 	msg.to = AddressLocal
 	peer := conn.RemoteAddr().String()
 	msg.from = &AddrPeer{peer: peer}
+
+	logger.Debug("recv msg %v", msg)
 
 	return msg
 }

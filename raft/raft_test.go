@@ -8,9 +8,11 @@ import (
 )
 
 func TestRaft(t *testing.T) {
-	config1 := &RaftConfig{ID: 1, PeerTcpPort: 18551, Peers: []string{"127.0.0.1:18552", "127.0.0.1:18553"}}
-	config2 := &RaftConfig{ID: 2, PeerTcpPort: 18552, Peers: []string{"127.0.0.1:18553", "127.0.0.1:18551"}}
-	config3 := &RaftConfig{ID: 3, PeerTcpPort: 18553, Peers: []string{"127.0.0.1:18551", "127.0.0.1:18552"}}
+	config1 := &RaftConfig{Id: 1, PeerTcpPort: 18551, Peers: []string{"127.0.0.1:18552", "127.0.0.1:18553"}}
+	config2 := &RaftConfig{Id: 2, PeerTcpPort: 18552, Peers: []string{"127.0.0.1:18553", "127.0.0.1:18551"}}
+	config3 := &RaftConfig{Id: 3, PeerTcpPort: 18553, Peers: []string{"127.0.0.1:18551", "127.0.0.1:18552"}}
+
+	logger.SetLogLevel("Debug")
 
 	r1 := NewRaft(config1, NewMemLogStore(), new(DummyInstStateMachine))
 	r2 := NewRaft(config2, NewMemLogStore(), new(DummyInstStateMachine))

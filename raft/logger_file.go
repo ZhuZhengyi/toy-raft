@@ -19,6 +19,7 @@ type FileLogger struct {
 	logLevel LogLevel
 	info     *log.Logger
 	debug    *log.Logger
+	detail   *log.Logger
 	warn     *log.Logger
 	errorl   *log.Logger
 	fatal    *log.Logger
@@ -36,6 +37,7 @@ func NewFileLogger(filePath string) *FileLogger {
 
 	return &FileLogger{
 		debug:  log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile),
+		detail: log.New(os.Stdout, "DETAIL: ", log.Ldate|log.Ltime|log.Lshortfile),
 		info:   log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
 		warn:   log.New(os.Stdout, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile),
 		errorl: log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
@@ -56,6 +58,13 @@ func (l *FileLogger) Info(format string, v ...interface{}) {
 
 func (l *FileLogger) Debug(format string, v ...interface{}) {
 	if l.logLevel > LogLevelDebug {
+		return
+	}
+	l.debug.Printf(format, v...)
+}
+
+func (l *FileLogger) Detail(format string, v ...interface{}) {
+	if l.logLevel > LogLevelDetail {
 		return
 	}
 	l.debug.Printf(format, v...)

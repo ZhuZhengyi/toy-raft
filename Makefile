@@ -22,7 +22,7 @@ clean:
 	@rm -rf build/* raft/*_string.go
 
 PHONY += test
-test:
+test: generate
 	@go test -v ./...
 
 PHONY += docs

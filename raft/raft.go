@@ -25,8 +25,8 @@ type raft struct {
 	ticker       *time.Ticker        //
 	stopc        chan struct{}       // stop signal chan
 	clientInC    chan reqSession     // request recv from client
-	peerInC      chan Message        // msg chan  recv from peer
-	peerOutC     chan Message        // msg send to peer
+	peerInC      chan *Message       // msg chan  recv from peer
+	peerOutC     chan *Message       // msg send to peer
 	peerSessions map[string]net.Conn //
 	peerListener net.Listener        //
 	node         *RaftNode           //
@@ -44,24 +44,17 @@ func (r *raft) String() string {
 func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
 	clientInC := make(chan reqSession, 64)
 	instC := make(chan Instruction, 64)
-	msgC := make(chan Message, 64)
-	peerInC := make(chan Message, 64)
-	peerOutC := make(chan Message, 64)
-	node := NewRaftNode(uint64(config.ID), RoleFollower, logStore, instC, msgC)
+	msgC := make(chan *Message, 64)
+	peerInC := make(chan *Message, 64)
+	peerOutC := make(chan *Message, 64)
+	node := NewRaftNode(uint64(config.Id), RoleFollower, logStore, instC, msgC)
 	instDriver := NewInstDriver(instC, msgC, sm)
 	peerSessions := make(map[string]net.Conn)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.PeerTcpPort))
-	if err != nil {
-		logger.Fatal("listen tcp %v", config.PeerTcpPort)
-		return nil
-	}
-
 	r := &raft{
 		config:       config,
-		id:           uint64(config.ID),
+		id:           uint64(config.Id),
 		stopc:        make(chan struct{}),
-		peerListener: listener,
 		clientInC:    clientInC,
 		peerInC:      peerInC,
 		peerOutC:     peerOutC,
@@ -71,8 +64,6 @@ func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
 		ticker:       time.NewTicker(TICK_INTERVAL_MS),
 		reqSessions:  make(map[ReqId]Session),
 	}
-
-	logger.Info("raft: %v listen at %v \n", r, r.peerListener.Addr())
 
 	return r
 }
@@ -119,7 +110,7 @@ func (r *raft) run(ctx context.Context) {
 		case <-r.ticker.C:
 			r.node.Tick()
 		case msg := <-r.peerInC:
-			r.node.Step(&msg)
+			r.node.Step(msg)
 		case clientReq := <-r.clientInC:
 			msg := r.makeClientMsg(clientReq.req, clientReq.session)
 			r.node.Step(msg)
@@ -130,7 +121,8 @@ func (r *raft) run(ctx context.Context) {
 }
 
 // dispatchTo message
-func (r *raft) dispatchTo(msg Message) {
+func (r *raft) dispatchTo(msg *Message) {
+	//logger.Debug("dispatch msg: %v", msg)
 	switch msg.to.Type() {
 	case AddrTypePeer, AddrTypePeers:
 		r.peerOutC <- msg

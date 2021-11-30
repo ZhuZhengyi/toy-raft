@@ -7,13 +7,13 @@ import "context"
 type InstDriver struct {
 	stopC chan struct{}
 	instC chan Instruction
-	msgC  chan Message
+	msgC  chan *Message
 	//notify map[uint64]struct{addr Address, data []byte}
 	sm InstStateMachine
 }
 
 //NewInstDriver allocate a new InstDriver from heap
-func NewInstDriver(instC chan Instruction, msgC chan Message, sm InstStateMachine) *InstDriver {
+func NewInstDriver(instC chan Instruction, msgC chan *Message, sm InstStateMachine) *InstDriver {
 	return &InstDriver{
 		stopC: make(chan struct{}),
 		instC: instC,

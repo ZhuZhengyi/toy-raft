@@ -7,7 +7,7 @@ type RaftNode struct {
 	id         uint64
 	term       uint64
 	instC      chan Instruction //
-	msgC       chan Message
+	msgC       chan *Message
 	log        *RaftLog
 	queuedReqs []queuedEvent
 	proxyReqs  map[ReqId]Address
@@ -20,7 +20,7 @@ func NewRaftNode(id uint64,
 	role RoleType,
 	logStore LogStore,
 	instc chan Instruction,
-	msgC chan Message,
+	msgC chan *Message,
 ) *RaftNode {
 	raftLog := NewRaftLog(logStore)
 	term, _ := raftLog.LoadTerm()
@@ -75,17 +75,23 @@ func (node *RaftNode) becomeRole(roleType RoleType) {
 func (node *RaftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
 
 func (node *RaftNode) becomeCandidate() {
-	if node.RoleType() != RoleFollower {
-		//logger.Error("Node(%v) becomeCandidate \n", node)
+	if node.RoleType() == RoleLeader {
+		logger.Error("Node(%v) can't becomeCandidate \n", node)
 		return
 	}
 	node.term++
 	node.log.SaveTerm(node.term, "")
 
 	lastIndex, lastTerm := node.log.LastIndexTerm()
-	node.send(&AddrPeers{}, &EventSolicitVoteReq{lastIndex, lastTerm})
-
 	node.becomeRole(RoleCandidate)
+
+	//node.peers
+
+	node.send(node.AddrPeers(), &EventSolicitVoteReq{lastIndex, lastTerm})
+}
+
+func (node *RaftNode) AddrPeers() *AddrPeers {
+	return &AddrPeers{peers: node.peers}
 }
 
 func (node *RaftNode) becomeFollower(term uint64, leader string) *RaftNode {
@@ -162,7 +168,7 @@ func (node *RaftNode) forwardToLeaderQueued(leader Address) {
 			proxyFrom = AddressLocal
 		}
 
-		msg := Message{
+		msg := &Message{
 			from:  proxyFrom,
 			to:    leader,
 			term:  0,
@@ -186,7 +192,7 @@ func (node *RaftNode) replicate(peer string, entry ...Entry) {
 
 // send event to
 func (node *RaftNode) send(to Address, event MsgEvent) {
-	msg := Message{
+	msg := &Message{
 		from:  AddressLocal,
 		to:    to,
 		term:  node.term,
@@ -197,6 +203,8 @@ func (node *RaftNode) send(to Address, event MsgEvent) {
 
 //Step step rsm by msg
 func (node *RaftNode) Step(msg *Message) {
+	logger.Debug("Node(%v) recieve msg: %v", node, msg)
+
 	if !node.validateMsg(msg) {
 		logger.Warn("Node(%v) recieve invalid msg: %v", node, msg)
 		return

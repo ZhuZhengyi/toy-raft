@@ -3,6 +3,7 @@ package raft
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"unsafe"
 
 	"github.com/google/uuid"
@@ -31,6 +32,7 @@ const (
 type MsgEvent interface {
 	Type() MsgType
 	Size() uint64
+	String() string
 	Marshal() []byte
 	Unmarshal(data []byte) error
 }
@@ -334,4 +336,38 @@ func (e *EventRefuseEntriesResp) Unmarshal(data []byte) error {
 		return err
 	}
 	return nil
+}
+
+func (e *EventHeartbeatReq) String() string {
+	return fmt.Sprintf("{commitIndex: %v, commitTerm: %v}", e.commitIndex, e.commitTerm)
+}
+
+func (e *EventHeartbeatResp) String() string {
+	return fmt.Sprintf("{commitIndex: %v, hasCommitted: %v}", e.commitIndex, e.hasCommitted)
+}
+
+func (e *EventSolicitVoteReq) String() string {
+	return fmt.Sprintf("{lastIndex: %v, lastTerm: %v}", e.lastIndex, e.lastTerm)
+}
+
+func (e *EventGrantVoteResp) String() string {
+	return "{}"
+}
+
+func (e *EventClientReq) String() string {
+	return fmt.Sprintf("{id: %v, request: %v}", e.id, e.request)
+}
+
+func (e *EventClientResp) String() string {
+	return fmt.Sprintf("{id: %v, response: %v}", e.id, e.response)
+}
+
+func (e *EventAppendEntriesReq) String() string {
+	return fmt.Sprintf("{baseIndex: %v, baseTerm: %v}", e.baseIndex, e.baseTerm)
+}
+func (e *EventAcceptEntriesResp) String() string {
+	return "{}"
+}
+func (e *EventRefuseEntriesResp) String() string {
+	return "{}"
 }

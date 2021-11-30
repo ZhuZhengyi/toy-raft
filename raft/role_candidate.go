@@ -2,6 +2,10 @@
 
 package raft
 
+import (
+	"fmt"
+)
+
 //Candidate role
 type Candidate struct {
 	*RaftNode
@@ -24,6 +28,11 @@ func NewCandidate(node *RaftNode) *Candidate {
 	}
 
 	return c
+}
+
+func (c *Candidate) String() string {
+	return fmt.Sprintf("{id: %v, term: %v, role: %v, votedCount: %v, electionTicks: %v}",
+		c.id, c.term, c.RoleType(), c.votedCount, c.electionTicks)
 }
 
 //Type candidate role type
@@ -71,6 +80,7 @@ func (c *Candidate) Step(msg *Message) {
 func (c *Candidate) Tick() {
 	c.electionTicks++
 	if c.electionTicks >= c.electionTimeout {
+		logger.Info("%v elect tick timeout, becomeCandidate\n", c)
 		c.becomeCandidate()
 	}
 }

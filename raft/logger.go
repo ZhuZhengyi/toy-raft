@@ -11,6 +11,7 @@ import (
 
 type Logger interface {
 	Debug(format string, v ...interface{})
+	Detail(format string, v ...interface{})
 	Info(format string, v ...interface{})
 	Warn(format string, v ...interface{})
 	Error(format string, v ...interface{})
@@ -21,6 +22,7 @@ type LogLevel int
 
 const (
 	LogLevelDebug LogLevel = iota
+	LogLevelDetail
 	LogLevelInfo
 	LogLevelWarn
 	LogLevelError
@@ -29,6 +31,8 @@ const (
 
 func parseLogLevel(logLevel string) LogLevel {
 	switch strings.ToLower(logLevel) {
+	case "detail":
+		return LogLevelDetail
 	case "debug":
 		return LogLevelDebug
 	case "info":
@@ -57,6 +61,7 @@ type StdLogger struct {
 	logLevel LogLevel
 	info     *log.Logger
 	debug    *log.Logger
+	detail   *log.Logger
 	warn     *log.Logger
 	errorl   *log.Logger
 	fatal    *log.Logger
@@ -65,6 +70,7 @@ type StdLogger struct {
 func NewStdLogger(logLevel LogLevel) *StdLogger {
 	return &StdLogger{
 		logLevel: logLevel,
+		detail:   log.New(os.Stdout, "DETAIL ", log.Ldate|log.Ltime|log.Lshortfile),
 		debug:    log.New(os.Stdout, "DEBUG ", log.Ldate|log.Ltime|log.Lshortfile),
 		info:     log.New(os.Stdout, "INFO ", log.Ldate|log.Ltime|log.Lshortfile),
 		warn:     log.New(os.Stdout, "WARN ", log.Ldate|log.Ltime|log.Lshortfile),
@@ -86,6 +92,13 @@ func (l *StdLogger) Info(format string, v ...interface{}) {
 
 func (l *StdLogger) Debug(format string, v ...interface{}) {
 	if l.logLevel > LogLevelDebug {
+		return
+	}
+	l.debug.Output(2, fmt.Sprintf(format, v...))
+}
+
+func (l *StdLogger) Detail(format string, v ...interface{}) {
+	if l.logLevel > LogLevelDetail {
 		return
 	}
 	l.debug.Output(2, fmt.Sprintf(format, v...))

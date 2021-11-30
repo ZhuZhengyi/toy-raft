@@ -33,7 +33,7 @@ type MsgEvent interface {
 	Type() MsgType
 	Size() uint64
 	String() string
-	Marshal() []byte
+	Marshal(data []byte)
 	Unmarshal(data []byte) error
 }
 
@@ -175,54 +175,35 @@ func (a *EventRefuseEntriesResp) Size() uint64 {
 	return uint64(unsafe.Sizeof(a))
 }
 
-func (e *EventHeartbeatReq) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
-	binary.Write(buffer, binary.BigEndian, e.commitIndex)
-	binary.Write(buffer, binary.BigEndian, e.commitTerm)
-
-	return buffer.Bytes()
+func (e *EventHeartbeatReq) Marshal(data []byte) {
+	binary.BigEndian.PutUint64(data[0:], e.commitIndex)
+	if len(data) > 8 {
+		binary.BigEndian.PutUint64(data[8:], e.commitTerm)
+	}
 }
 
 func (e *EventHeartbeatReq) Unmarshal(data []byte) error {
-	buffer := bytes.NewBuffer(data)
-
-	if err := binary.Read(buffer, binary.BigEndian, &e.commitIndex); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
-		return err
-	}
-	if err := binary.Read(buffer, binary.BigEndian, &e.commitTerm); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
-		return err
+	e.commitIndex = binary.BigEndian.Uint64(data[:8])
+	if len(data) >= 16 {
+		e.commitTerm = binary.BigEndian.Uint64(data[8:16])
 	}
 	return nil
 }
 
-func (e *EventHeartbeatResp) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
-	binary.Write(buffer, binary.BigEndian, e.commitIndex)
-	binary.Write(buffer, binary.BigEndian, e.hasCommitted)
-
-	return buffer.Bytes()
+func (e *EventHeartbeatResp) Marshal(data []byte) {
+	binary.BigEndian.PutUint64(data[0:], e.commitIndex)
+	//binary.BigEndian.PutUint16(data[8:], e.hasCommitted)
 }
 
 func (e *EventHeartbeatResp) Unmarshal(data []byte) error {
-	buffer := bytes.NewBuffer(data)
-
-	if err := binary.Read(buffer, binary.BigEndian, &e.commitIndex); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
-		return err
-	}
-	if err := binary.Read(buffer, binary.BigEndian, &e.hasCommitted); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
-		return err
-	}
+	e.commitIndex = binary.BigEndian.Uint64(data[:8])
+	//e.hasCommitted = binary.BigEndian.Uint64(data[8:16])
 	return nil
 }
 
-func (e *EventClientReq) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
+func (e *EventClientReq) Marshal(data []byte) {
+	//TODO:
 
-	return buffer.Bytes()
 }
 
 func (e *EventClientReq) Unmarshal(data []byte) error {
@@ -235,10 +216,8 @@ func (e *EventClientReq) Unmarshal(data []byte) error {
 	return nil
 }
 
-func (e *EventClientResp) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
-
-	return buffer.Bytes()
+func (e *EventClientResp) Marshal(data []byte) {
+	//TODO:
 }
 
 func (e *EventClientResp) Unmarshal(data []byte) error {
@@ -251,28 +230,22 @@ func (e *EventClientResp) Unmarshal(data []byte) error {
 	return nil
 }
 
-func (e *EventSolicitVoteReq) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
-	binary.Write(buffer, binary.BigEndian, e.lastIndex)
-	binary.Write(buffer, binary.BigEndian, e.lastTerm)
-
-	return buffer.Bytes()
+func (e *EventSolicitVoteReq) Marshal(data []byte) {
+	binary.BigEndian.PutUint64(data[0:], e.lastIndex)
+	if len(data) > 8 {
+		binary.BigEndian.PutUint64(data[8:], e.lastTerm)
+	}
 }
 
 func (e *EventSolicitVoteReq) Unmarshal(data []byte) error {
-	buffer := bytes.NewBuffer(data)
-
-	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
-		return err
+	e.lastIndex = binary.BigEndian.Uint64(data[:8])
+	if len(data) >= 16 {
+		e.lastTerm = binary.BigEndian.Uint64(data[8:16])
 	}
 	return nil
 }
 
-func (e *EventGrantVoteResp) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
-
-	return buffer.Bytes()
+func (e *EventGrantVoteResp) Marshal(data []byte) {
 }
 
 func (e *EventGrantVoteResp) Unmarshal(data []byte) error {
@@ -286,30 +259,30 @@ func (e *EventGrantVoteResp) Unmarshal(data []byte) error {
 	return nil
 }
 
-func (e *EventAppendEntriesReq) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
-	binary.Write(buffer, binary.BigEndian, e.baseIndex)
-	binary.Write(buffer, binary.BigEndian, e.baseTerm)
-	for _, entry := range e.entries {
-		binary.Write(buffer, binary.BigEndian, entry)
-	}
+func (e *EventAppendEntriesReq) Marshal(data []byte) {
+	binary.BigEndian.PutUint64(data[0:], e.baseIndex)
+	binary.BigEndian.PutUint64(data[8:], e.baseTerm)
+	//TODO:
+	//for _, entry := range e.entries {
+	//    binary.Write(buffer, binary.BigEndian, entry)
+	//}
 
-	return buffer.Bytes()
+	//return buffer.Bytes()
 }
 
 func (e *EventAppendEntriesReq) Unmarshal(data []byte) error {
-	buffer := bytes.NewBuffer(data)
+	//TODO:
+	//buffer := bytes.NewBuffer(data)
 
-	if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
-		return err
-	}
+	//if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
+	//    logger.Warn("unmarshal %v error: %v", e, err)
+	//    return err
+	//}
 	return nil
 }
 
-func (e *EventAcceptEntriesResp) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
-	return buffer.Bytes()
+func (e *EventAcceptEntriesResp) Marshal(data []byte) {
+	//TODO:
 }
 
 func (e *EventAcceptEntriesResp) Unmarshal(data []byte) error {
@@ -322,10 +295,8 @@ func (e *EventAcceptEntriesResp) Unmarshal(data []byte) error {
 	return nil
 }
 
-func (e *EventRefuseEntriesResp) Marshal() []byte {
-	buffer := bytes.NewBuffer([]byte{})
+func (e *EventRefuseEntriesResp) Marshal(data []byte) {
 
-	return buffer.Bytes()
 }
 
 func (e *EventRefuseEntriesResp) Unmarshal(data []byte) error {
@@ -339,35 +310,35 @@ func (e *EventRefuseEntriesResp) Unmarshal(data []byte) error {
 }
 
 func (e *EventHeartbeatReq) String() string {
-	return fmt.Sprintf("{commitIndex: %v, commitTerm: %v}", e.commitIndex, e.commitTerm)
+	return fmt.Sprintf("%v{commitIndex: %v, commitTerm: %v}", e.Type(), e.commitIndex, e.commitTerm)
 }
 
 func (e *EventHeartbeatResp) String() string {
-	return fmt.Sprintf("{commitIndex: %v, hasCommitted: %v}", e.commitIndex, e.hasCommitted)
+	return fmt.Sprintf("%v{commitIndex: %v, hasCommitted: %v}", e.Type(), e.commitIndex, e.hasCommitted)
 }
 
 func (e *EventSolicitVoteReq) String() string {
-	return fmt.Sprintf("{lastIndex: %v, lastTerm: %v}", e.lastIndex, e.lastTerm)
+	return fmt.Sprintf("%v{lastIndex: %v, lastTerm: %v}", e.Type(), e.lastIndex, e.lastTerm)
 }
 
 func (e *EventGrantVoteResp) String() string {
-	return "{}"
+	return fmt.Sprintf("%v{}", e.Type())
 }
 
 func (e *EventClientReq) String() string {
-	return fmt.Sprintf("{id: %v, request: %v}", e.id, e.request)
+	return fmt.Sprintf("%v{id: %v, request: %v}", e.Type(), e.id, e.request)
 }
 
 func (e *EventClientResp) String() string {
-	return fmt.Sprintf("{id: %v, response: %v}", e.id, e.response)
+	return fmt.Sprintf("%v{id: %v, response: %v}", e.Type(), e.id, e.response)
 }
 
 func (e *EventAppendEntriesReq) String() string {
-	return fmt.Sprintf("{baseIndex: %v, baseTerm: %v}", e.baseIndex, e.baseTerm)
+	return fmt.Sprintf("%v{baseIndex: %v, baseTerm: %v}", e.Type(), e.baseIndex, e.baseTerm)
 }
 func (e *EventAcceptEntriesResp) String() string {
-	return "{}"
+	return fmt.Sprintf("%v{}", e.Type())
 }
 func (e *EventRefuseEntriesResp) String() string {
-	return "{}"
+	return fmt.Sprintf("%v{}", e.Type())
 }

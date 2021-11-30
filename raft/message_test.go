@@ -26,17 +26,19 @@ func TestMessage(t *testing.T) {
 		NewMessage(&AddrLocal{}, &AddrPeers{}, 4, &EventClientResp{}),
 	}
 
-	data := make([]byte, 1024)
-	buffer := bytes.NewBuffer(data)
+	logger.SetLogLevel("Debug")
 
 	for _, msg1 := range tests {
-		msgBytes := msg1.Marshal()
+		logger.Info("msg size: %v", msg1.Size())
+		data := make([]byte, msg1.Size())
+		msg1.Marshal(data)
 		msg11 := new(Message)
-		msg11.Unmarshal(msgBytes)
+		msg11.Unmarshal(data)
 		if msg1.equalTo(msg11) {
 			t.Errorf("msg (%v) marshal (%v) ", msg1, msg11)
 		}
 
+		buffer := bytes.NewBuffer(data)
 		msg1.SendTo(buffer)
 
 		msg12 := new(Message)

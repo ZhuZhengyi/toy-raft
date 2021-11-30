@@ -80,7 +80,7 @@ func (f *Follower) Step(msg *Message) {
 func (f *Follower) Tick() {
 	atomic.AddInt64(&f.leaderSeenTicks, 1)
 	if atomic.LoadInt64(&f.leaderSeenTicks) >= f.leaderSeenTimeout {
-		logger.Info("%v elect tick timeout, becomeCandidate\n", f)
+		logger.Info("Node[%v] elect tick timeout, becomeCandidate\n", f)
 		atomic.StoreInt64(&f.leaderSeenTicks, 0)
 		f.becomeCandidate()
 	}

@@ -2,7 +2,6 @@
 package raft
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -40,7 +39,7 @@ func (m *Message) MsgType() MsgType {
 
 //String
 func (m *Message) String() string {
-	return fmt.Sprintf("Message(%v -> %v): term(%v) event(%v)",
+	return fmt.Sprintf("{from: %v, to: %v: term: %v, event: %v}",
 		m.from, m.to, m.term, m.event)
 }
 
@@ -52,56 +51,45 @@ func (m *Message) Size() uint64 {
 }
 
 //Marshal message to []byte
-func (m *Message) Marshal() []byte {
-	datas := takeBytes()
-	defer putBytes(datas)
-
-	buffer := bytes.NewBuffer(datas)
-	binary.Write(buffer, binary.BigEndian, m.term)
-	binary.Write(buffer, binary.BigEndian, m.MsgType())
-	binary.Write(buffer, binary.BigEndian, m.event.Marshal())
-	return buffer.Bytes()
+func (m *Message) Marshal(data []byte) {
+	binary.BigEndian.PutUint64(data[0:], m.term)
+	binary.BigEndian.PutUint32(data[8:], uint32(m.MsgType()))
+	if len(data) > 12 {
+		m.event.Marshal(data[12:])
+	}
 }
 
 //Unmarshal message from []byte to message
 func (m *Message) Unmarshal(data []byte) error {
-	buffer := bytes.NewBuffer(data)
 
-	if err := binary.Read(buffer, binary.BigEndian, &m.term); err != nil {
-		logger.Warn("unmarshal %v error: %v", m, err)
-		return err
-	}
+	m.term = binary.BigEndian.Uint64(data[:8])
+	msgType := MsgType(binary.BigEndian.Uint32(data[8:12]))
+	m.event = NewMsgEvent(msgType)
 
-	var msgMsgType MsgType
-	binary.Read(buffer, binary.BigEndian, &msgMsgType)
-	m.event = NewMsgEvent(msgMsgType)
-
-	return m.event.Unmarshal(data[8:])
+	return m.event.Unmarshal(data[12:])
 }
 
 //RecvFrom recv message from remote peer
 func (m *Message) RecvFrom(r io.Reader) error {
-	buf := takeBytes()
-	defer putBytes(buf)
-
-	_, err := r.Read(buf[:8])
+	header := make([]byte, 8)
+	_, err := r.Read(header[:8])
 	if err != nil {
 		logger.Error("read msg size error:%v", err)
 		return err
 	}
-	size := binary.BigEndian.Uint64(buf[:8])
+	size := binary.BigEndian.Uint64(header[:8])
 	if size < 8 || size > 256*1024*1024 {
-		logger.Error("recv error msg size: %v \n", size)
+		logger.Debug("recv error msg size: %v \n", size)
 		return ErrRecvMessage
 	}
 
-	_, err = r.Read(buf[:size])
+	data := make([]byte, size)
+	_, err = r.Read(data[:size])
 	if err != nil {
 		logger.Error("read msg size error:%v", err)
 		return err
 	}
-	//msg := takeMessage()
-	m.Unmarshal(buf[:size])
+	m.Unmarshal(data[:size])
 
 	return nil
 }
@@ -109,15 +97,20 @@ func (m *Message) RecvFrom(r io.Reader) error {
 //SendTo send  message to remote peer
 func (m *Message) SendTo(w io.Writer) error {
 	size := m.Size()
-	bytes := takeBytes()
-	binary.BigEndian.PutUint64(bytes, size)
-	if _, err := w.Write(bytes[:8]); err != nil {
+	if size <= 0 {
+		return nil
+	}
+
+	msgSize := make([]byte, 8)
+	binary.BigEndian.PutUint64(msgSize, size)
+	if _, err := w.Write(msgSize[:8]); err != nil {
 		logger.Fatal("Sent message(%v) err: %v\n", m, err)
 		return err
 	}
 
-	data := m.Marshal()
-	if _, err := w.Write(data); err != nil {
+	data := make([]byte, size)
+	m.Marshal(data)
+	if _, err := w.Write(data[:size]); err != nil {
 		logger.Error("send msg: %v err: %v", m, err)
 		return err
 	}

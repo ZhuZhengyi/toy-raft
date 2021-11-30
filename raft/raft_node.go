@@ -203,12 +203,12 @@ func (node *RaftNode) send(to Address, event MsgEvent) {
 
 //Step step rsm by msg
 func (node *RaftNode) Step(msg *Message) {
-	logger.Debug("Node(%v) recieve msg: %v", node, msg)
-
 	if !node.validateMsg(msg) {
-		logger.Warn("Node(%v) recieve invalid msg: %v", node, msg)
+		logger.Debug("Node(%v) recieve invalid msg: %v", node, msg)
 		return
 	}
+
+	logger.Detail("Node[%v] step msg: %v", node, msg)
 
 	// msg from peer which term > self
 	if msg.term > node.term && msg.from.Type() == AddrTypePeer {

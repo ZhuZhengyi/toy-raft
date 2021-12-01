@@ -38,7 +38,7 @@ func NewRaftNode(id uint64,
 	case RoleCandidate:
 		node.role = NewCandidate(node)
 	case RoleFollower:
-		node.role = NewFollower(node)
+		node.role = NewFollower(node, "")
 	case RoleLeader:
 		node.role = NewLeader(node)
 	}
@@ -47,7 +47,7 @@ func NewRaftNode(id uint64,
 }
 
 func (node *RaftNode) String() string {
-	return fmt.Sprintf("{id: %v, term: %v, role: %v}", node.id, node.term, node.RoleType())
+	return fmt.Sprintf("{id:%v,term:%v,role:%v}", node.id, node.term, node.RoleType())
 }
 
 //RoleType get raftnode role type
@@ -56,17 +56,16 @@ func (node *RaftNode) RoleType() RoleType {
 }
 
 func (node *RaftNode) becomeRole(roleType RoleType) {
+	logger.Info("node:%v become role %v\n", node, roleType)
 	if node.RoleType() == roleType {
 		return
 	}
-
-	logger.Debug("node(%v) become role %v\n", node, roleType)
 
 	switch roleType {
 	case RoleCandidate:
 		node.role = NewCandidate(node)
 	case RoleFollower:
-		node.role = NewFollower(node)
+		node.role = NewFollower(node, "")
 	case RoleLeader:
 		node.role = NewLeader(node)
 	}
@@ -79,13 +78,12 @@ func (node *RaftNode) becomeCandidate() {
 		logger.Error("Node(%v) can't becomeCandidate \n", node)
 		return
 	}
+
 	node.term++
 	node.log.SaveTerm(node.term, "")
 
 	lastIndex, lastTerm := node.log.LastIndexTerm()
 	node.becomeRole(RoleCandidate)
-
-	//node.peers
 
 	node.send(node.AddrPeers(), &EventSolicitVoteReq{lastIndex, lastTerm})
 }
@@ -95,15 +93,34 @@ func (node *RaftNode) AddrPeers() *AddrPeers {
 }
 
 func (node *RaftNode) becomeFollower(term uint64, leader string) *RaftNode {
+	votedFor := ""
 	if term < node.term {
 		logger.Error("Node(%v) becomeFollower err, term: %v, leader: %v\n", node, term, leader)
 		return node
 	}
-	node.term = term
-	node.log.SaveTerm(node.term, leader)
-	node.becomeRole(RoleFollower)
+	if term > node.term {
+		logger.Info("Node:%v discover a new term:%v, following leader %v", node, term, leader)
+		node.term = term
+		node.log.SaveTerm(node.term, "")
+	} else {
+		logger.Info("Node:%v discover a new leader:%v, following", node, leader)
+		//votedFor = node.role
+	}
+
+	switch r := node.role.(type) {
+	case *Follower:
+		votedFor = r.votedFor
+		node.role = NewFollower(node, leader, votedFor)
+	case *Candidate:
+
+	case *Leader:
+	default:
+
+	}
+
 	node.abortProxyReqs()
 	node.forwardToLeaderQueued(&AddrPeer{leader})
+
 	return node
 }
 
@@ -204,19 +221,31 @@ func (node *RaftNode) send(to Address, event MsgEvent) {
 //Step step rsm by msg
 func (node *RaftNode) Step(msg *Message) {
 	if !node.validateMsg(msg) {
-		logger.Debug("Node(%v) recieve invalid msg: %v", node, msg)
+		logger.Debug("node:%v, step_invalid_msg:%v", node, msg)
 		return
 	}
 
-	logger.Detail("Node[%v] step msg: %v", node, msg)
+	logger.Detail("node:%v, step msg:%v", node, msg)
 
 	// msg from peer which term > self
-	if msg.term > node.term && msg.from.Type() == AddrTypePeer {
-		from := msg.from.(*AddrPeer)
-		node.becomeFollower(msg.term, from.peer)
+	if msg.from.Type() == AddrTypePeer {
+		if msg.term > node.term || node.isFollowerNoLeader() {
+			logger.Detail("node:%v, msg: %v term is bigger", node, msg)
+			from := msg.from.(*AddrPeer)
+			node.becomeFollower(msg.term, from.peer)
+		}
 	}
 
 	node.role.Step(msg)
+}
+
+func (node *RaftNode) isFollowerNoLeader() bool {
+	if node.RoleType() == RoleFollower {
+		if n, ok := node.role.(*Follower); ok {
+			return n.leader == ""
+		}
+	}
+	return false
 }
 
 //Tick tick rsm

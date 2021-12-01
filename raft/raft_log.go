@@ -89,6 +89,7 @@ func (log *RaftLog) LoadTerm() (term uint64, leader string) {
 
 //SaveTerm save term, leader meta into log store
 func (log *RaftLog) SaveTerm(term uint64, leader string) {
+	//TODO:
 }
 
 func (log *RaftLog) Get(index uint64) *Entry {

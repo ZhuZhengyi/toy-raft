@@ -19,9 +19,11 @@ var (
 )
 
 //NewFollower allocate a new raft follower struct
-func NewFollower(node *RaftNode) *Follower {
+func NewFollower(node *RaftNode, leader, votedFor string) *Follower {
 	f := &Follower{
 		RaftNode:          node,
+		leader:            leader,
+		votedFor:          votedFor,
 		leaderSeenTicks:   0,
 		leaderSeenTimeout: int64(randInt(ELECT_TICK_MIN, ELECT_TICK_MAX)),
 	}
@@ -35,7 +37,7 @@ func (f *Follower) Type() RoleType {
 }
 
 func (f *Follower) String() string {
-	return fmt.Sprintf("{id: %v, term: %v, role: %v, leader: %v, leaderSeenTicks: %v}",
+	return fmt.Sprintf("{id:%v,term:%v,role:%v,leader:%v,leaderSeenTicks:%v}",
 		f.id, f.term, f.RoleType(), f.leader, f.leaderSeenTicks)
 }
 
@@ -62,7 +64,29 @@ func (f *Follower) Step(msg *Message) {
 			}
 		}
 	case MsgTypeVoteReq:
-		//TODO:
+		if msgSolictVoteReq, ok := msg.event.(*EventSolicitVoteReq); ok {
+			if addr, ok := msg.from.(*AddrPeer); ok {
+				if f.votedFor != "" && f.votedFor != addr.peer {
+					logger.Detail("node:%v already vote for %v, refused to vote again %v", f, f.votedFor, addr.peer)
+					return
+				}
+			}
+			lastIndex, lastTerm := f.log.LastIndexTerm()
+			if msgSolictVoteReq.lastTerm < lastTerm {
+				logger.Detail("node:%v msg:%v lastTerm %v < node lastTerm: %v", f, msg, msgSolictVoteReq.lastTerm, lastTerm)
+				return
+			}
+			if msgSolictVoteReq.lastTerm == lastTerm && msgSolictVoteReq.lastIndex < lastIndex {
+				return
+			}
+
+			if addr, ok := msg.from.(*AddrPeer); ok {
+				f.send(msg.from, &EventGrantVoteResp{})
+				f.log.SaveTerm(f.term, addr.peer)
+				f.votedFor = addr.peer
+				logger.Detail("node:%v, vote for:%v", f, f.votedFor)
+			}
+		}
 	case MsgTypeAppendEntriesReq:
 		//TODO:
 	case MsgTypeClientReq:
@@ -72,7 +96,7 @@ func (f *Follower) Step(msg *Message) {
 	case MsgTypeVoteResp:
 		//TODO:
 	default:
-		logger.Warn("role(%v) received unexpected message(%v)\n", f, msg)
+		logger.Warn("node:%v received unexpected message(%v)\n", f, msg)
 	}
 }
 
@@ -80,7 +104,7 @@ func (f *Follower) Step(msg *Message) {
 func (f *Follower) Tick() {
 	atomic.AddInt64(&f.leaderSeenTicks, 1)
 	if atomic.LoadInt64(&f.leaderSeenTicks) >= f.leaderSeenTimeout {
-		logger.Info("Node[%v] elect tick timeout, becomeCandidate\n", f)
+		logger.Info("node:%v elect tick timeout", f)
 		atomic.StoreInt64(&f.leaderSeenTicks, 0)
 		f.becomeCandidate()
 	}

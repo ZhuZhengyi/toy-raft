@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -20,23 +21,24 @@ var (
 
 //
 type raft struct {
-	config       *RaftConfig         //
-	id           uint64              // raft id
-	ticker       *time.Ticker        //
-	stopc        chan struct{}       // stop signal chan
-	clientInC    chan reqSession     // request recv from client
-	peerInC      chan *Message       // msg chan  recv from peer
-	peerOutC     chan *Message       // msg send to peer
-	peerSessions map[string]net.Conn //
-	peerListener net.Listener        //
-	node         *RaftNode           //
-	smDriver     *InstDriver         //
-	reqSessions  map[ReqId]Session   //
-	cancelFunc   context.CancelFunc  //
+	config            *RaftConfig     //
+	id                uint64          // raft id
+	ticker            *time.Ticker    //
+	stopc             chan struct{}   // stop signal chan
+	clientInC         chan reqSession // request recv from client
+	peerInC           chan *Message   // msg chan  recv from peer
+	peerOutC          chan *Message   // msg send to peer
+	peerSessionsMutex sync.RWMutex
+	peerSessions      map[string]net.Conn //
+	peerListener      net.Listener        //
+	node              *RaftNode           //
+	smDriver          *InstDriver         //
+	reqSessions       map[ReqId]Session   //
+	cancelFunc        context.CancelFunc  //
 }
 
 func (r *raft) String() string {
-	return fmt.Sprintf("{node: %v, port: %v}", r.node, r.config.PeerTcpPort)
+	return fmt.Sprintf("{node:%v,port:%v}", r.node, r.config.PeerTcpPort)
 }
 
 //NewRaft allocate a new raft struct from heap and init it
@@ -157,5 +159,20 @@ func (r *raft) makeClientMsg(req Request, session Session) (msg *Message) {
 	clientReq := NewEventClientReq(req)
 	r.pushClientSession(clientReq.id, session)
 	msg = NewMessage(&AddrClient{}, &AddrLocal{}, 0, clientReq)
+	return
+}
+
+func (r *raft) UpdatePeerSessions(session net.Conn) {
+	r.peerSessionsMutex.Lock()
+	r.peerSessions[session.RemoteAddr().String()] = session
+	r.peerSessionsMutex.Unlock()
+
+	//r.node.peers = append(r.node.peers, session.RemoteAddr)
+}
+
+func (r *raft) GetPeerSession(peer string) (session net.Conn, ok bool) {
+	r.peerSessionsMutex.RLock()
+	session, ok = r.peerSessions[peer]
+	r.peerSessionsMutex.RUnlock()
 	return
 }

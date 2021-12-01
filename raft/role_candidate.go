@@ -31,7 +31,7 @@ func NewCandidate(node *RaftNode) *Candidate {
 }
 
 func (c *Candidate) String() string {
-	return fmt.Sprintf("{id: %v, term: %v, role: %v, votedCount: %v, electionTicks: %v}",
+	return fmt.Sprintf("{id:%v,term:%v,role:%v,votedCount:%v,electionTicks:%v}",
 		c.id, c.term, c.RoleType(), c.votedCount, c.electionTicks)
 }
 
@@ -71,8 +71,9 @@ func (c *Candidate) Step(msg *Message) {
 		delete(c.proxyReqs, event.id)
 		c.send(AddressClient, &EventClientResp{event.id, event.response})
 	case MsgTypeVoteReq:
+		logger.Detail("node:%v receive ignore msg:%v", c, msg)
 	default:
-		logger.Warn("RaftRole(%v) reciev error msg: (%v)\n", c, msg)
+		logger.Warn("node:%v receive error msg:%v", c, msg)
 	}
 }
 
@@ -80,7 +81,15 @@ func (c *Candidate) Step(msg *Message) {
 func (c *Candidate) Tick() {
 	c.electionTicks++
 	if c.electionTicks >= c.electionTimeout {
-		logger.Info("%v elect tick timeout, becomeCandidate\n", c)
+		logger.Info("node:%v elect tick timeout, becomeCandidate\n", c)
 		c.becomeCandidate()
 	}
+}
+
+func (node *Candidate) becomeFollower(term uint64, leader string) *RaftNode {
+
+	node.abortProxyReqs()
+	node.forwardToLeaderQueued(&AddrPeer{leader})
+
+	return node.RaftNode
 }

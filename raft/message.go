@@ -39,8 +39,8 @@ func (m *Message) MsgType() MsgType {
 
 //String
 func (m *Message) String() string {
-	return fmt.Sprintf("{from: %v, to: %v: term: %v, event: %v}",
-		m.from, m.to, m.term, m.event)
+	return fmt.Sprintf("{%v,from:%v,to:%v:term:%v}",
+		m.event, m.from, m.to, m.term)
 }
 
 //Size message byte size with marshal

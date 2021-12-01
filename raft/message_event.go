@@ -310,35 +310,35 @@ func (e *EventRefuseEntriesResp) Unmarshal(data []byte) error {
 }
 
 func (e *EventHeartbeatReq) String() string {
-	return fmt.Sprintf("%v{commitIndex: %v, commitTerm: %v}", e.Type(), e.commitIndex, e.commitTerm)
+	return fmt.Sprintf("%v:{commitIndex: %v, commitTerm: %v}", e.Type(), e.commitIndex, e.commitTerm)
 }
 
 func (e *EventHeartbeatResp) String() string {
-	return fmt.Sprintf("%v{commitIndex: %v, hasCommitted: %v}", e.Type(), e.commitIndex, e.hasCommitted)
+	return fmt.Sprintf("%v:{commitIndex: %v, hasCommitted: %v}", e.Type(), e.commitIndex, e.hasCommitted)
 }
 
 func (e *EventSolicitVoteReq) String() string {
-	return fmt.Sprintf("%v{lastIndex: %v, lastTerm: %v}", e.Type(), e.lastIndex, e.lastTerm)
+	return fmt.Sprintf("%v:{lastIndex: %v, lastTerm: %v}", e.Type(), e.lastIndex, e.lastTerm)
 }
 
 func (e *EventGrantVoteResp) String() string {
-	return fmt.Sprintf("%v{}", e.Type())
+	return fmt.Sprintf("%v:{}", e.Type())
 }
 
 func (e *EventClientReq) String() string {
-	return fmt.Sprintf("%v{id: %v, request: %v}", e.Type(), e.id, e.request)
+	return fmt.Sprintf("%v:{id: %v, request: %v}", e.Type(), e.id, e.request)
 }
 
 func (e *EventClientResp) String() string {
-	return fmt.Sprintf("%v{id: %v, response: %v}", e.Type(), e.id, e.response)
+	return fmt.Sprintf("%v:{id: %v, response: %v}", e.Type(), e.id, e.response)
 }
 
 func (e *EventAppendEntriesReq) String() string {
-	return fmt.Sprintf("%v{baseIndex: %v, baseTerm: %v}", e.Type(), e.baseIndex, e.baseTerm)
+	return fmt.Sprintf("%v:{baseIndex: %v, baseTerm: %v}", e.Type(), e.baseIndex, e.baseTerm)
 }
 func (e *EventAcceptEntriesResp) String() string {
-	return fmt.Sprintf("%v{}", e.Type())
+	return fmt.Sprintf("%v:{}", e.Type())
 }
 func (e *EventRefuseEntriesResp) String() string {
-	return fmt.Sprintf("%v{}", e.Type())
+	return fmt.Sprintf("%v:{}", e.Type())
 }

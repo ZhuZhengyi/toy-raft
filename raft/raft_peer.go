@@ -23,18 +23,18 @@ func (r *raft) runPeerMsgIn(ctx context.Context) {
 		return
 	}
 	r.peerListener = listener
-	logger.Info("raft: %v listen at %v \n", r, r.peerListener.Addr())
+	logger.Info("raft:%v listen at %v \n", r, r.peerListener.Addr())
 
 	defer r.peerListener.Close()
 
 	for {
 		conn, err2 := r.peerListener.Accept()
 		if err2 != nil {
-			logger.Warn("listen tcp %v, error: %v\n", r.peerListener.Addr(), err2)
+			logger.Warn("r:%v listen tcp:%v, error:%v\n", r, r.peerListener.Addr(), err2)
 			return
 		}
 
-		logger.Info("raft(%v) get connect from %v \n", r, conn.RemoteAddr())
+		logger.Info("raft:%v connect in:  %v <- %v \n", r, conn.LocalAddr(), conn.RemoteAddr())
 
 		select {
 		case <-ctx.Done():
@@ -42,6 +42,8 @@ func (r *raft) runPeerMsgIn(ctx context.Context) {
 			return
 		default:
 		}
+
+		r.UpdatePeerSessions(conn)
 
 		go r.doRecvFromConn(subCtx, conn)
 	}
@@ -52,12 +54,12 @@ func (r *raft) runPeerMsgOut(ctx context.Context) {
 		for i := 0; i < PEER_CONNECT_TRY_TIMES; i++ {
 			peerConn, err := net.DialTimeout("tcp", peer, PEER_CONNECT_TIMEOUT)
 			if err != nil {
-				logger.Error("raft: %v connect to peer(%v) error:%v\n", r, peer, err)
+				logger.Warn("raft:%v connect out:%v error:%v", r, peer, err)
 				time.Sleep(PEER_CONNECT_TRY_SLEEP_INTERVAL)
 			} else {
+				r.UpdatePeerSessions(peerConn)
 				r.node.peers = append(r.node.peers, peer)
-				r.peerSessions[peer] = peerConn
-				logger.Info("get peer(%v) connection\n", peer)
+				logger.Info("raft:%v connect out: %v -> %v", r, peerConn.LocalAddr(), peerConn.RemoteAddr())
 				break
 			}
 		}
@@ -112,12 +114,14 @@ func (r *raft) sendPeerMsg(msg *Message) {
 func (r *raft) sendMsgToPeer(msg *Message, peer string) {
 	msg.to = &AddrPeer{peer}
 	msg.from = AddressLocal
-	session := r.peerSessions[peer]
 
-	msg.SendTo(session)
-
-	logger.Debug("send msg %v", msg)
-	//putMessage(msg)
+	if session, ok := r.GetPeerSession(peer); !ok {
+		logger.Warn("raft:%v session not exist for peer:%v", r, peer)
+		return
+	} else {
+		msg.SendTo(session)
+		logger.Debug("raft:%v send msg:%v", r, msg)
+	}
 }
 
 // recv message from peer

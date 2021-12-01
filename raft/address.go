@@ -26,6 +26,13 @@ type Address interface {
 	Unmarshal([]byte)
 }
 
+var (
+	_ Address = (*AddrLocal)(nil)
+	_ Address = (*AddrClient)(nil)
+	_ Address = (*AddrPeer)(nil)
+	_ Address = (*AddrPeers)(nil)
+)
+
 type AddrLocal struct{}
 
 type AddrClient struct{}

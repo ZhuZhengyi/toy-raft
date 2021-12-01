@@ -83,12 +83,12 @@ func (log *RaftLog) CommittedIndex() uint64 {
 }
 
 //LoadTerm load term, leader from meta
-func (log *RaftLog) LoadTerm() (term uint64, leader string) {
+func (log *RaftLog) LoadTerm() (term uint64, leader uint64) {
 	return
 }
 
 //SaveTerm save term, leader meta into log store
-func (log *RaftLog) SaveTerm(term uint64, leader string) {
+func (log *RaftLog) SaveTerm(term uint64, leader uint64) {
 	//TODO:
 }
 

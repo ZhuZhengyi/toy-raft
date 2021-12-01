@@ -71,11 +71,11 @@ func NewStdLogger(logLevel LogLevel) *StdLogger {
 	return &StdLogger{
 		logLevel: logLevel,
 		detail:   log.New(os.Stdout, "DETAIL ", log.Ldate|log.Ltime|log.Lshortfile),
-		debug:    log.New(os.Stdout, "DEBUG ", log.Ldate|log.Ltime|log.Lshortfile),
-		info:     log.New(os.Stdout, "INFO ", log.Ldate|log.Ltime|log.Lshortfile),
-		warn:     log.New(os.Stdout, "WARN ", log.Ldate|log.Ltime|log.Lshortfile),
-		errorl:   log.New(os.Stderr, "ERROR ", log.Ldate|log.Ltime|log.Lshortfile),
-		fatal:    log.New(os.Stderr, "FATAL ", log.Ldate|log.Ltime|log.Lshortfile),
+		debug:    log.New(os.Stdout, "DEBUG  ", log.Ldate|log.Ltime|log.Lshortfile),
+		info:     log.New(os.Stdout, "INFO   ", log.Ldate|log.Ltime|log.Lshortfile),
+		warn:     log.New(os.Stdout, "WARN   ", log.Ldate|log.Ltime|log.Lshortfile),
+		errorl:   log.New(os.Stderr, "ERROR  ", log.Ldate|log.Ltime|log.Lshortfile),
+		fatal:    log.New(os.Stderr, "FATAL  ", log.Ldate|log.Ltime|log.Lshortfile),
 	}
 }
 

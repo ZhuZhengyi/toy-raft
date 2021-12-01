@@ -86,7 +86,7 @@ func (c *Candidate) Tick() {
 	}
 }
 
-func (node *Candidate) becomeFollower(term uint64, leader string) *RaftNode {
+func (node *Candidate) becomeFollower(term uint64, leader uint64) *RaftNode {
 
 	node.abortProxyReqs()
 	node.forwardToLeaderQueued(&AddrPeer{leader})

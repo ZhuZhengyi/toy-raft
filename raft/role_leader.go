@@ -4,8 +4,8 @@ type Leader struct {
 	*RaftNode
 	heartbeatTicks   uint64
 	heartbeatTimeOut uint64
-	peerNextIndex    map[string]uint64
-	peerLastIndex    map[string]uint64
+	peerNextIndex    map[uint64]uint64
+	peerLastIndex    map[uint64]uint64
 }
 
 func NewLeader(node *RaftNode) *Leader {
@@ -14,8 +14,8 @@ func NewLeader(node *RaftNode) *Leader {
 		RaftNode:         node,
 		heartbeatTicks:   0,
 		heartbeatTimeOut: 1,
-		peerNextIndex:    make(map[string]uint64),
-		peerLastIndex:    make(map[string]uint64),
+		peerNextIndex:    make(map[uint64]uint64),
+		peerLastIndex:    make(map[uint64]uint64),
 	}
 
 	for _, peer := range node.peers {

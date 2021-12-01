@@ -37,36 +37,58 @@ func (m *Message) MsgType() MsgType {
 	return MsgTypeUnkown
 }
 
+func (m *Message) From() uint64 {
+	if addrPeer, ok := m.from.(*AddrPeer); ok {
+		return addrPeer.peer
+	}
+	return 0
+}
+
+func (m *Message) To() uint64 {
+	if addrPeer, ok := m.to.(*AddrPeer); ok {
+		return addrPeer.peer
+	}
+	return 0
+}
+
 //String
 func (m *Message) String() string {
-	return fmt.Sprintf("{%v,from:%v,to:%v:term:%v}",
-		m.event, m.from, m.to, m.term)
+	return fmt.Sprintf("{term:%v,%v,%v->%v}",
+		m.term, m.event, m.from, m.to)
 }
 
 //Size message byte size with marshal
 func (m *Message) Size() uint64 {
-	return uint64(unsafe.Sizeof(m.term)) +
+	return uint64(unsafe.Sizeof(m.From())) +
+		uint64(unsafe.Sizeof(m.To())) +
+		uint64(unsafe.Sizeof(m.term)) +
 		uint64(unsafe.Sizeof(m.MsgType())) +
 		m.event.Size()
 }
 
 //Marshal message to []byte
 func (m *Message) Marshal(data []byte) {
-	binary.BigEndian.PutUint64(data[0:], m.term)
-	binary.BigEndian.PutUint32(data[8:], uint32(m.MsgType()))
-	if len(data) > 12 {
-		m.event.Marshal(data[12:])
+	if len(data) < 28 {
+		return
+	}
+	binary.BigEndian.PutUint64(data[0:], m.From())
+	binary.BigEndian.PutUint64(data[8:], m.To())
+	binary.BigEndian.PutUint64(data[16:], m.term)
+	binary.BigEndian.PutUint32(data[24:], uint32(m.MsgType()))
+	if len(data) > 28 {
+		m.event.Marshal(data[28:])
 	}
 }
 
 //Unmarshal message from []byte to message
 func (m *Message) Unmarshal(data []byte) error {
-
-	m.term = binary.BigEndian.Uint64(data[:8])
-	msgType := MsgType(binary.BigEndian.Uint32(data[8:12]))
+	m.from = &AddrPeer{peer: binary.BigEndian.Uint64(data[0:8])}
+	m.to = &AddrPeer{peer: binary.BigEndian.Uint64(data[8:16])}
+	m.term = binary.BigEndian.Uint64(data[16:24])
+	msgType := MsgType(binary.BigEndian.Uint32(data[24:28]))
 	m.event = NewMsgEvent(msgType)
 
-	return m.event.Unmarshal(data[12:])
+	return m.event.Unmarshal(data[28:])
 }
 
 //RecvFrom recv message from remote peer

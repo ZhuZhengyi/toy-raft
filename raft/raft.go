@@ -29,7 +29,7 @@ type raft struct {
 	peerInC           chan *Message   // msg chan  recv from peer
 	peerOutC          chan *Message   // msg send to peer
 	peerSessionsMutex sync.RWMutex
-	peerSessions      map[string]net.Conn //
+	peerSessions      map[uint64]net.Conn //
 	peerListener      net.Listener        //
 	node              *RaftNode           //
 	smDriver          *InstDriver         //
@@ -38,7 +38,7 @@ type raft struct {
 }
 
 func (r *raft) String() string {
-	return fmt.Sprintf("{node:%v,port:%v}", r.node, r.config.PeerTcpPort)
+	return fmt.Sprintf("{node:%v}", r.node)
 }
 
 //NewRaft allocate a new raft struct from heap and init it
@@ -51,7 +51,7 @@ func NewRaft(config *RaftConfig, logStore LogStore, sm InstStateMachine) *raft {
 	peerOutC := make(chan *Message, 64)
 	node := NewRaftNode(uint64(config.Id), RoleFollower, logStore, instC, msgC)
 	instDriver := NewInstDriver(instC, msgC, sm)
-	peerSessions := make(map[string]net.Conn)
+	peerSessions := make(map[uint64]net.Conn)
 
 	r := &raft{
 		config:       config,
@@ -124,11 +124,10 @@ func (r *raft) run(ctx context.Context) {
 
 // dispatchTo message
 func (r *raft) dispatchTo(msg *Message) {
-	//logger.Debug("dispatch msg: %v", msg)
-	switch msg.to.Type() {
-	case AddrTypePeer, AddrTypePeers:
+	switch msg.to.(type) {
+	case *AddrPeer, *AddrPeers:
 		r.peerOutC <- msg
-	case AddrTypeClient:
+	case *AddrClient:
 		if msg.MsgType() == MsgTypeClientResp {
 			r.replyToClient(msg.event.(*EventClientResp))
 		}
@@ -162,17 +161,17 @@ func (r *raft) makeClientMsg(req Request, session Session) (msg *Message) {
 	return
 }
 
-func (r *raft) UpdatePeerSessions(session net.Conn) {
+func (r *raft) UpdatePeerSessions(id uint64, session net.Conn) {
 	r.peerSessionsMutex.Lock()
-	r.peerSessions[session.RemoteAddr().String()] = session
+	r.peerSessions[id] = session
 	r.peerSessionsMutex.Unlock()
 
-	//r.node.peers = append(r.node.peers, session.RemoteAddr)
+	r.node.peers = append(r.node.peers, id)
 }
 
-func (r *raft) GetPeerSession(peer string) (session net.Conn, ok bool) {
+func (r *raft) GetPeerSession(id uint64) (session net.Conn, ok bool) {
 	r.peerSessionsMutex.RLock()
-	session, ok = r.peerSessions[peer]
+	session, ok = r.peerSessions[id]
 	r.peerSessionsMutex.RUnlock()
 	return
 }

@@ -38,11 +38,11 @@ type AddrLocal struct{}
 type AddrClient struct{}
 
 type AddrPeer struct {
-	peer string
+	peer uint64
 }
 
 type AddrPeers struct {
-	peers []string
+	peers []uint64
 }
 
 var (
@@ -60,11 +60,11 @@ func (a *AddrClient) String() string {
 }
 
 func (a *AddrPeer) String() string {
-	return fmt.Sprintf("%v(%v)", a.Type().String(), a.peer)
+	return fmt.Sprintf("%v", a.peer)
 }
 
 func (a *AddrPeers) String() string {
-	return fmt.Sprintf("%v(%v)", a.Type().String(), a.peers)
+	return a.Type().String()
 }
 
 func (a *AddrLocal) Size() uint64 {

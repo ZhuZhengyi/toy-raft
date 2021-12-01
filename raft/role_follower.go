@@ -8,8 +8,8 @@ import (
 //Follower a follower raft role
 type Follower struct {
 	*RaftNode
-	leader            string
-	votedFor          string
+	leader            uint64
+	votedFor          uint64
 	leaderSeenTicks   int64
 	leaderSeenTimeout int64
 }
@@ -19,7 +19,7 @@ var (
 )
 
 //NewFollower allocate a new raft follower struct
-func NewFollower(node *RaftNode, leader, votedFor string) *Follower {
+func NewFollower(node *RaftNode, leader, votedFor uint64) *Follower {
 	f := &Follower{
 		RaftNode:          node,
 		leader:            leader,
@@ -66,7 +66,7 @@ func (f *Follower) Step(msg *Message) {
 	case MsgTypeVoteReq:
 		if msgSolictVoteReq, ok := msg.event.(*EventSolicitVoteReq); ok {
 			if addr, ok := msg.from.(*AddrPeer); ok {
-				if f.votedFor != "" && f.votedFor != addr.peer {
+				if f.votedFor != 0 && f.votedFor != addr.peer {
 					logger.Detail("node:%v already vote for %v, refused to vote again %v", f, f.votedFor, addr.peer)
 					return
 				}

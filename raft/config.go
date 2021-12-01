@@ -17,9 +17,9 @@ type LoggerConfig struct {
 
 //RaftConfig raft config
 type RaftConfig struct {
-	Id          int      `yaml:"Id"`
-	PeerTcpPort int      `yaml:"PeerTcpPort"` //
-	Peers       []string `yaml:"Peers"`
+	Id          int        `yaml:"Id"`
+	PeerTcpPort int        `yaml:"PeerTcpPort"` //
+	Peers       []RaftPeer `yaml:"Peers"`
 }
 
 //Config

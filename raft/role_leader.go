@@ -37,35 +37,89 @@ func (l *Leader) Type() RoleType {
 
 //Step step rsm by msg
 func (l *Leader) Step(msg *Message) {
-	switch msg.MsgType() {
-	case MsgTypeHeartbeatResp:
-		//TODO:
-	case MsgTypeAcceptEntriesResp:
-		//TODO:
-	case MsgTypeRefuseEntriesResp:
-		//TODO:
-	case MsgTypeClientReq:
-		//TODO:
-	case MsgTypeClientResp:
-		//TODO:
-	case MsgTypeVoteReq, MsgTypeVoteResp:
-		{
+	logger.Debug("leader:%v,step msg:%v", l, msg)
+	switch event := msg.event.(type) {
+	case *EventHeartbeatResp:
+		switch from := msg.from.(type) {
+		case *AddrPeer:
+			instruction := &InstVote{term: msg.term, index: event.commitIndex, addr: msg.from}
+			l.instC <- instruction
+			if !event.hasCommitted {
+				l.replicate(from.peer)
+			}
 		}
+	case *EventAcceptEntriesResp:
+		switch from := msg.from.(type) {
+		case *AddrPeer:
+			l.peerLastIndex[from.peer] = event.lastIndex
+			l.peerNextIndex[from.peer] = event.lastIndex + 1
+		}
+		l.commit()
+	case *EventRefuseEntriesResp:
+		switch from := msg.from.(type) {
+		case *AddrPeer:
+			if i := l.peerNextIndex[from.peer]; i > 1 {
+				l.peerLastIndex[from.peer] = i - 1
+			}
+			l.replicate(from.peer)
+		}
+	case *EventClientReq:
+		switch req := event.request.(type) {
+		case *ReqQuery:
+			instQuery := &InstQuery{id: event.id,
+				addr:    msg.from,
+				command: req.command,
+				term:    l.term,
+				index:   l.log.CommittedIndex(),
+				quorum:  l.quorum(),
+			}
+			l.instC <- instQuery
+			instVote := &InstVote{term: l.term}
+			l.instC <- instVote
+			if len(l.peers) > 0 {
+				index, term := l.log.CommittedIndexTerm()
+				l.send(&AddrPeers{peers: l.peers}, &EventHeartbeatReq{
+					commitIndex: index,
+					commitTerm:  term,
+				})
+			}
+		case *ReqMutate:
+		case *ReqStatus:
+		default:
+		}
+	case *EventClientResp:
+	case *EventSolicitVoteReq, *EventGrantVoteResp:
+		logger.Warn("leader:%v ignore msg(%v)\n", l, msg)
+	case *EventHeartbeatReq, *EventAppendEntriesReq:
+		logger.Warn("leader:%v step unexpected msg(%v)\n", l, msg)
 	default:
-		logger.Warn("role(%v) step unexpected msg(%v)\n", l, msg)
-		//TODO:
+		logger.Warn("leader:%v step unexpected msg(%v)\n", l, msg)
 	}
 }
 
 //Tick tick leader
 func (l *Leader) Tick() {
+	logger.Debug("leader:%v tick", l)
 	if len(l.peers) > 0 {
 		l.heartbeatTicks += 1
 		if l.heartbeatTicks >= l.heartbeatTimeOut {
+			logger.Detail("leader:%v hbtick timeout", l)
 			l.heartbeatTicks = 0
-
 			commitIndex, commitTerm := l.log.CommittedIndexTerm()
 			l.send(AddressPeers, &EventHeartbeatReq{commitIndex, commitTerm})
 		}
 	}
+}
+
+/// replicate logs to peer
+func (l *Leader) replicate(peer uint64) {
+	//TODO: replicate logs to peer
+	logger.Debug("leader:%v replicate log to peer:%v", l, peer)
+
+}
+
+/// Commits pending log entries
+func (l *Leader) commit() {
+	logger.Debug("leader:%v commit pending entries", l)
+	//TODO
 }

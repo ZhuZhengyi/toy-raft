@@ -41,7 +41,12 @@ var (
 
 //ReqQuery request for query
 type ReqQuery struct {
-	query []byte
+	id      []byte
+	term    uint64
+	index   uint64
+	quorum  uint64
+	addr    Address
+	command []byte
 }
 
 //ReqMutate request for mutate

@@ -51,16 +51,13 @@ func NewRaftLog(store LogStore) *RaftLog {
 }
 
 func (log *RaftLog) LastIndexTerm() (index uint64, term uint64) {
-	log.RLock()
 	l := len(log.entries)
 	if l > 0 {
 		last := log.entries[l-1]
 		index = last.index
 		term = last.term
-		log.RUnlock()
 		return
 	}
-	log.RUnlock()
 
 	return log.logStore.LastIndexTerm()
 }

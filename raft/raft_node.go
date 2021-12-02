@@ -56,10 +56,11 @@ func (node *RaftNode) RoleType() RoleType {
 }
 
 func (node *RaftNode) becomeRole(roleType RoleType) {
-	logger.Info("node:%v become role %v\n", node, roleType)
 	if node.RoleType() == roleType {
 		return
 	}
+
+	logger.Info("node:%v become role %v\n", node, roleType)
 
 	switch roleType {
 	case RoleCandidate:
@@ -131,16 +132,29 @@ func (node *RaftNode) becomeLeader() *RaftNode {
 	}
 
 	node.becomeRole(RoleLeader)
+
+	logger.Info("node:%v become leader", node)
+
 	committedIndex, committedTerm := node.log.CommittedIndexTerm()
 	heartbeatEvent := &EventHeartbeatReq{
 		commitIndex: committedIndex,
 		commitTerm:  committedTerm,
 	}
-	node.send(AddressPeers, heartbeatEvent)
+	node.send(&AddrPeers{peers: node.peers}, heartbeatEvent)
 
 	node.appendAndCastCommand(NOOPCommand)
 	node.abortProxyReqs()
 
+	for _, queuedReq := range node.queuedReqs {
+		node.Step(&Message{
+			from:  queuedReq.from,
+			to:    &AddrLocal{},
+			term:  0,
+			event: queuedReq.event,
+		})
+	}
+
+	logger.Info("node:%v become leader", node)
 	return node
 }
 
@@ -235,8 +249,6 @@ func (node *RaftNode) Step(msg *Message) {
 			node.becomeFollower(msg.term, from.peer)
 		}
 	default:
-	}
-	if msg.from.Type() == AddrTypePeer {
 	}
 
 	node.role.Step(msg)

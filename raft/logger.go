@@ -101,7 +101,7 @@ func (l *StdLogger) Detail(format string, v ...interface{}) {
 	if l.logLevel > LogLevelDetail {
 		return
 	}
-	l.debug.Output(2, fmt.Sprintf(format, v...))
+	l.detail.Output(2, fmt.Sprintf(format, v...))
 }
 
 func (l *StdLogger) Warn(format string, v ...interface{}) {

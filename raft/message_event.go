@@ -114,19 +114,12 @@ type EventClientReq struct {
 	request Request
 }
 
-func NewEventClientReq(req Request) *EventClientReq {
-	uuid, _ := uuid.NewRandom()
-	return &EventClientReq{
-		id:      uuid,
-		request: req,
-	}
-}
-
 type EventClientResp struct {
 	id       ReqId
 	response Response
 }
 
+// Leader replicat a set of log entries to follower
 type EventAppendEntriesReq struct {
 	baseIndex uint64
 	baseTerm  uint64
@@ -134,9 +127,18 @@ type EventAppendEntriesReq struct {
 }
 
 type EventAcceptEntriesResp struct {
+	lastIndex uint64
 }
 
 type EventRefuseEntriesResp struct {
+}
+
+func NewEventClientReq(req Request) *EventClientReq {
+	uuid, _ := uuid.NewRandom()
+	return &EventClientReq{
+		id:      uuid,
+		request: req,
+	}
 }
 
 func (e *EventHeartbeatReq) Size() uint64 {
@@ -164,7 +166,7 @@ func (a *EventGrantVoteResp) Size() uint64 {
 }
 
 func (a *EventAppendEntriesReq) Size() uint64 {
-	return uint64(unsafe.Sizeof(a))
+	return uint64(unsafe.Sizeof(*a)) + uint64(len(a.entries))*uint64(unsafe.Sizeof(Entry{}))
 }
 
 func (a *EventAcceptEntriesResp) Size() uint64 {
@@ -260,6 +262,9 @@ func (e *EventGrantVoteResp) Unmarshal(data []byte) error {
 }
 
 func (e *EventAppendEntriesReq) Marshal(data []byte) {
+	if len(data) < 16 {
+		logger.Warn("event:%v marshal error", e)
+	}
 	binary.BigEndian.PutUint64(data[0:], e.baseIndex)
 	binary.BigEndian.PutUint64(data[8:], e.baseTerm)
 	//TODO:
@@ -271,9 +276,14 @@ func (e *EventAppendEntriesReq) Marshal(data []byte) {
 }
 
 func (e *EventAppendEntriesReq) Unmarshal(data []byte) error {
-	//TODO:
+	if len(data) < 16 {
+		logger.Warn("event:%v marshal error", e)
+	}
 	//buffer := bytes.NewBuffer(data)
+	e.baseIndex = binary.BigEndian.Uint64(data[0:8])
+	e.baseTerm = binary.BigEndian.Uint64(data[8:16])
 
+	//TODO:
 	//if err := binary.Read(buffer, binary.BigEndian, e); err != nil {
 	//    logger.Warn("unmarshal %v error: %v", e, err)
 	//    return err

@@ -42,35 +42,28 @@ func (c *Candidate) Type() RoleType {
 
 //Step step candidate state by msg
 func (c *Candidate) Step(msg *Message) {
-	switch msg.event.Type() {
-	case MsgTypeHeartbeatReq:
-		if msg.from.Type() == AddrTypePeer {
-			from := msg.from.(*AddrPeer)
-			c.becomeFollower(msg.term, from.peer).Step(msg)
-			return
+	switch event := msg.event.(type) {
+	case *EventHeartbeatReq:
+		switch from := msg.from.(type) {
+		case *AddrPeer:
+			c.RaftNode.becomeFollower(msg.term, from.peer).Step(msg)
+		default:
 		}
-	case MsgTypeVoteResp:
+	case *EventGrantVoteResp:
 		c.votedCount++
 		if c.votedCount >= c.quorum() {
-			node := c.becomeLeader()
-			for _, queuedReq := range node.queuedReqs {
-				node.Step(&Message{
-					from:  queuedReq.from,
-					to:    &AddrLocal{},
-					term:  0,
-					event: queuedReq.event,
-				})
-			}
+			logger.Detail("candidate:%v get quorum vote:%v(%v)", c, c.votedCount, c.quorum())
+			c.RaftNode.becomeLeader()
+			logger.Detail("candidate:%v become leader:%v(%v)", c, c.votedCount, c.quorum())
 		}
-	case MsgTypeClientReq:
+	case *EventClientReq:
 		c.queuedReqs = append(c.queuedReqs, queuedEvent{msg.from, msg.event})
-	case MsgTypeClientResp:
-		event := msg.event.(*EventClientResp)
+	case *EventClientResp:
 		if event.response.Type() == RespTypeStatus {
 		}
 		delete(c.proxyReqs, event.id)
 		c.send(AddressClient, &EventClientResp{event.id, event.response})
-	case MsgTypeVoteReq:
+	case *EventSolicitVoteReq:
 		logger.Detail("node:%v receive ignore msg:%v", c, msg)
 	default:
 		logger.Warn("node:%v receive error msg:%v", c, msg)
@@ -81,7 +74,7 @@ func (c *Candidate) Step(msg *Message) {
 func (c *Candidate) Tick() {
 	c.electionTicks++
 	if c.electionTicks >= c.electionTimeout {
-		logger.Info("node:%v elect tick timeout, becomeCandidate\n", c)
+		logger.Info("candidate:%v elect tick timeout, becomeCandidate\n", c)
 		c.becomeCandidate()
 	}
 }

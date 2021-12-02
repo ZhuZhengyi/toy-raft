@@ -1,6 +1,8 @@
 //
 package raft
 
+import "github.com/google/uuid"
+
 //go:generate stringer -type=InstType
 
 type InstType int16 // Instruction type
@@ -44,8 +46,9 @@ type InstNotify struct {
 }
 
 type InstQuery struct {
-	id      uint64
+	id      uuid.UUID
 	term    uint64
+	index   uint64
 	quorum  uint64
 	addr    Address
 	command []byte

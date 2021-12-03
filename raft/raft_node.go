@@ -75,8 +75,9 @@ func (node *RaftNode) becomeRole(roleType RoleType) {
 func (node *RaftNode) saveTermVoteMeta(term uint64, voteFor uint64) {}
 
 func (node *RaftNode) becomeCandidate() {
-	if node.RoleType() == RoleLeader {
-		logger.Error("Node(%v) can't becomeCandidate \n", node)
+	switch node.role.(type) {
+	case *Leader:
+		logger.Warn("node:%v can't becomeCandidate \n", node)
 		return
 	}
 
@@ -99,41 +100,46 @@ func (node *RaftNode) becomeFollower(term uint64, leader uint64) *RaftNode {
 		logger.Error("node:%v becomeFollower err, term: %v, leader: %v\n", node, term, leader)
 		return node
 	}
-	if term > node.term {
-		logger.Info("node:%v discover a new term:%v, following leader %v", node, term, leader)
-		node.term = term
-		node.log.SaveTerm(node.term, 0)
-	} else {
-		logger.Info("node:%v discover a new leader:%v, following", node, leader)
-		//votedFor = node.role
-	}
 
 	switch r := node.role.(type) {
 	case *Follower:
+		if term > node.term {
+			logger.Info("node:%v discover a new term:%v, following leader %v", node, term, leader)
+			node.term = term
+			node.log.SaveTerm(node.term, 0)
+		} else {
+			logger.Info("node:%v discover a new leader:%v, following", node, leader)
+		}
 		votedFor = r.votedFor
+		node.abortProxyReqs()
+		node.forwardToLeaderQueued(&AddrPeer{leader})
 		node.role = NewFollower(node, leader, votedFor)
 	case *Candidate:
-
+		node.term = term
+		node.log.SaveTerm(term, 0)
+		node.abortProxyReqs()
+		node.forwardToLeaderQueued(&AddrPeer{leader})
+		node.role = NewFollower(node, leader, 0)
 	case *Leader:
+		node.term = term
+		node.log.SaveTerm(term, 0)
+		node.instC <- &InstAbort{}
+		node.role = NewFollower(node, leader, 0)
 	default:
-
 	}
-
-	node.abortProxyReqs()
-	node.forwardToLeaderQueued(&AddrPeer{leader})
 
 	return node
 }
 
 func (node *RaftNode) becomeLeader() *RaftNode {
-	if node.RoleType() != RoleCandidate {
-		logger.Warn("becomeLeader Warn  ")
+	switch node.role.(type) {
+	case *Follower:
+		logger.Warn("node:%v cannot allow change to leader", node)
 		return node
 	}
 
+	logger.Debug("node:%v will change %v -> Leader", node, node.role.Type())
 	node.becomeRole(RoleLeader)
-
-	logger.Info("node:%v become leader", node)
 
 	committedIndex, committedTerm := node.log.CommittedIndexTerm()
 	heartbeatEvent := &EventHeartbeatReq{
@@ -179,33 +185,30 @@ func (node *RaftNode) abortProxyReqs() {
 
 // forward to leader
 func (node *RaftNode) forwardToLeaderQueued(leader Address) {
-	if node.RoleType() == RoleLeader {
+	switch node.role.(type) {
+	case *Leader:
+		logger.Warn("node:%v cannot forwardToLeaderQueued", node)
 		return
 	}
 	for _, queueReq := range node.queuedReqs {
-		if queueReq.MsgType() != MsgTypeClientReq {
-			//logger.Warn("forward req(%v) \n", queueReq)
+		switch event := queueReq.event.(type) {
+		case *EventClientReq:
+			from := queueReq.from
+			node.proxyReqs[event.id] = from
+			proxyFrom := from
+			switch from.(type) {
+			case *AddrClient:
+				proxyFrom = AddressLocal
+			}
+			msg := &Message{
+				from:  proxyFrom,
+				to:    leader,
+				term:  0,
+				event: event,
+			}
+			node.msgC <- msg
 			continue
 		}
-		originEvent := queueReq.event.(*EventClientReq)
-		from := queueReq.from
-
-		// record origin req
-		node.proxyReqs[originEvent.id] = from
-
-		// forward
-		proxyFrom := from
-		if from.Type() == AddrTypeClient {
-			proxyFrom = AddressLocal
-		}
-
-		msg := &Message{
-			from:  proxyFrom,
-			to:    leader,
-			term:  0,
-			event: queueReq.event,
-		}
-		node.msgC <- msg
 	}
 }
 
@@ -239,13 +242,13 @@ func (node *RaftNode) Step(msg *Message) {
 		return
 	}
 
-	logger.Detail("node:%v,step msg:%v", node, msg)
+	logger.Debug("node:%v,step msg:%v", node, msg)
 
 	// msg from peer which term > self
 	switch from := msg.from.(type) {
 	case *AddrPeer:
 		if msg.term > node.term || node.isFollowerNoLeader() {
-			logger.Detail("node:%v,msg:%v term is bigger", node, msg)
+			logger.Debug("node:%v,msg:%v term is bigger", node, msg)
 			node.becomeFollower(msg.term, from.peer)
 		}
 	default:
@@ -255,10 +258,9 @@ func (node *RaftNode) Step(msg *Message) {
 }
 
 func (node *RaftNode) isFollowerNoLeader() bool {
-	if node.RoleType() == RoleFollower {
-		if n, ok := node.role.(*Follower); ok {
-			return n.leader == 0
-		}
+	switch role := node.role.(type) {
+	case *Follower:
+		return role.leader == 0
 	}
 	return false
 }

@@ -128,8 +128,9 @@ func (r *raft) dispatchTo(msg *Message) {
 	case *AddrPeer, *AddrPeers:
 		r.peerOutC <- msg
 	case *AddrClient:
-		if msg.MsgType() == MsgTypeClientResp {
-			r.replyToClient(msg.event.(*EventClientResp))
+		switch event := msg.event.(type) {
+		case *EventClientResp:
+			r.replyToClient(event)
 		}
 	default:
 		logger.Warn("dispatch invalid to msg: %v\n", msg)

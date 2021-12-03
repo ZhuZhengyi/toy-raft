@@ -53,13 +53,14 @@ func (c *Candidate) Step(msg *Message) {
 		c.votedCount++
 		if c.votedCount >= c.quorum() {
 			logger.Detail("candidate:%v get quorum vote:%v(%v)", c, c.votedCount, c.quorum())
-			c.RaftNode.becomeLeader()
-			logger.Detail("candidate:%v become leader:%v(%v)", c, c.votedCount, c.quorum())
+			c.becomeLeader()
 		}
 	case *EventClientReq:
 		c.queuedReqs = append(c.queuedReqs, queuedEvent{msg.from, msg.event})
 	case *EventClientResp:
-		if event.response.Type() == RespTypeStatus {
+		switch event.response.(type) {
+		case *RespStatus:
+			//TODO:
 		}
 		delete(c.proxyReqs, event.id)
 		c.send(AddressClient, &EventClientResp{event.id, event.response})

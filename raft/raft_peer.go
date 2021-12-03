@@ -97,13 +97,6 @@ func (r *raft) doRecvFromConn(ctx context.Context, conn net.Conn) {
 
 func (r *raft) sendPeerMsg(msg *Message) {
 	switch msg.to.(type) {
-	case *AddrPeer, *AddrPeers:
-	default:
-		logger.Warn("sentToPeer invalid msg: %v\n", msg)
-		return
-	}
-
-	switch msg.to.(type) {
 	case *AddrPeer:
 		r.sendMsgToPeer(msg)
 	case *AddrPeers:
@@ -137,7 +130,7 @@ func (r *raft) recvMsgFromPeer(ctx context.Context, conn net.Conn) *Message {
 	msg := new(Message)
 	msg.RecvFrom(conn)
 
-	logger.Debug("recv msg %v", msg)
+	logger.Debug("raft:%v recv msg %v", r, msg)
 
 	return msg
 }

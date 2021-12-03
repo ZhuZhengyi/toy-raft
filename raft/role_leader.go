@@ -103,7 +103,7 @@ func (l *Leader) Tick() {
 	if len(l.peers) > 0 {
 		l.heartbeatTicks += 1
 		if l.heartbeatTicks >= l.heartbeatTimeOut {
-			logger.Detail("leader:%v hbtick timeout", l)
+			logger.Debug("leader:%v hbtick timeout", l)
 			l.heartbeatTicks = 0
 			commitIndex, commitTerm := l.log.CommittedIndexTerm()
 			l.send(AddressPeers, &EventHeartbeatReq{commitIndex, commitTerm})

@@ -3,6 +3,8 @@
 #
 #
 
+LogLevel := Info 
+
 BUILD_TARGETS := build/toy-raft
 
 PHONY := all
@@ -23,7 +25,7 @@ clean:
 
 PHONY += test
 test: generate
-	@go test -v ./...
+	@go test -v ./... -args -LogLevel=$(LogLevel)
 
 PHONY += docs
 docs:

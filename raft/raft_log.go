@@ -64,13 +64,15 @@ func (log *RaftLog) LastIndexTerm() (index uint64, term uint64) {
 
 func (log *RaftLog) CommittedIndexTerm() (index uint64, term uint64) {
 	log.RLock()
-	defer log.RUnlock()
 	if log.uncommit > 0 {
 		last := log.entries[log.uncommit-1]
 		index = last.index
 		term = last.term
+		log.RUnlock()
 		return
 	}
+	log.RUnlock()
+
 	return log.logStore.LastIndexTerm()
 }
 

@@ -48,52 +48,47 @@ func (f *Follower) Step(msg *Message) {
 		atomic.StoreInt64(&f.leaderSeenTicks, 0)
 	}
 
-	switch msg.MsgType() {
-	case MsgTypeHeartbeatReq:
+	switch event := msg.event.(type) {
+	case *EventHeartbeatReq:
 		if f.isFromLeader(msg.from) {
-			hbReq := msg.event.(*EventHeartbeatReq)
-			hasCommitted := f.log.Has(hbReq.commitIndex, hbReq.commitTerm)
-			if hasCommitted && hbReq.commitIndex > f.log.CommittedIndex() {
+			hasCommitted := f.log.Has(event.commitIndex, event.commitTerm)
+			if hasCommitted && event.commitIndex > f.log.CommittedIndex() {
 				oldCommittedIndex := f.log.CommittedIndex()
-				f.log.Commit(hbReq.commitIndex)
-				for i := oldCommittedIndex + 1; i < hbReq.commitIndex; i++ {
+				f.log.Commit(event.commitIndex)
+				for i := oldCommittedIndex + 1; i < event.commitIndex; i++ {
 					entry := f.log.Get(i)
 					instruction := &InstApply{entry}
 					f.instC <- instruction
 				}
 			}
 		}
-	case MsgTypeVoteReq:
-		if msgSolictVoteReq, ok := msg.event.(*EventSolicitVoteReq); ok {
-			if addr, ok := msg.from.(*AddrPeer); ok {
-				if f.votedFor != 0 && f.votedFor != addr.peer {
-					logger.Detail("node:%v already vote for %v, refused to vote again %v", f, f.votedFor, addr.peer)
-					return
-				}
-			}
-			lastIndex, lastTerm := f.log.LastIndexTerm()
-			if msgSolictVoteReq.lastTerm < lastTerm {
-				logger.Detail("node:%v msg:%v lastTerm %v < node lastTerm: %v", f, msg, msgSolictVoteReq.lastTerm, lastTerm)
-				return
-			}
-			if msgSolictVoteReq.lastTerm == lastTerm && msgSolictVoteReq.lastIndex < lastIndex {
-				return
-			}
-
-			if addr, ok := msg.from.(*AddrPeer); ok {
-				f.send(msg.from, &EventGrantVoteResp{})
-				f.log.SaveTerm(f.term, addr.peer)
-				f.votedFor = addr.peer
-				logger.Detail("node:%v, vote for:%v", f, f.votedFor)
-			}
+	case *EventSolicitVoteReq:
+		lastIndex, lastTerm := f.log.LastIndexTerm()
+		if event.lastTerm < lastTerm {
+			logger.Detail("Follower:%v msg:%v lastTerm %v < node lastTerm: %v", f, msg, event.lastTerm, lastTerm)
+			return
 		}
-	case MsgTypeAppendEntriesReq:
+		if event.lastTerm == lastTerm && event.lastIndex < lastIndex {
+			return
+		}
+		switch from := msg.from.(type) {
+		case *AddrPeer:
+			if f.votedFor != 0 && f.votedFor != from.peer {
+				logger.Detail("Follower:%v already vote for %v, refused to vote again %v", f, f.votedFor, from.peer)
+				return
+			}
+			f.send(msg.from, &EventGrantVoteResp{})
+			f.log.SaveTerm(f.term, from.peer)
+			f.votedFor = from.peer
+			logger.Detail("Follower:%v, vote for:%v", f, f.votedFor)
+		}
+	case *EventAppendEntriesReq:
 		//TODO:
-	case MsgTypeClientReq:
+	case *EventClientReq:
 		//TODO:
-	case MsgTypeClientResp:
+	case *EventClientResp:
 		//TODO:
-	case MsgTypeVoteResp:
+	case *EventGrantVoteResp:
 		//TODO:
 	default:
 		logger.Warn("node:%v received unexpected message(%v)\n", f, msg)
@@ -111,11 +106,12 @@ func (f *Follower) Tick() {
 }
 
 func (f *Follower) isFromLeader(addr Address) bool {
-	if addr.Type() == AddrTypePeer {
-		from := addr.(*AddrPeer).peer
-		if from == f.leader {
+	switch from := addr.(type) {
+	case *AddrPeer:
+		if from.peer == f.leader {
 			return true
 		}
+	default:
 	}
 
 	return false

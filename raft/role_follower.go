@@ -45,6 +45,7 @@ func (f *Follower) String() string {
 func (f *Follower) Step(msg *Message) {
 	// 收到leader消息，重置心跳计数
 	if f.isFromLeader(msg.from) {
+		logger.Debug("follower:%v recv msg from leader: %v, reset leaderSeenTicks", f, f.leader)
 		atomic.StoreInt64(&f.leaderSeenTicks, 0)
 	}
 
@@ -61,6 +62,7 @@ func (f *Follower) Step(msg *Message) {
 					f.instC <- instruction
 				}
 			}
+			f.send(msg.from, &EventHeartbeatResp{event.commitIndex, hasCommitted})
 		}
 	case *EventSolicitVoteReq:
 		lastIndex, lastTerm := f.log.LastIndexTerm()
@@ -99,7 +101,7 @@ func (f *Follower) Step(msg *Message) {
 func (f *Follower) Tick() {
 	atomic.AddInt64(&f.leaderSeenTicks, 1)
 	if atomic.LoadInt64(&f.leaderSeenTicks) >= f.leaderSeenTimeout {
-		logger.Info("node:%v elect tick timeout", f)
+		logger.Info("node:%v leader seen tick timeout, will become candidate", f)
 		atomic.StoreInt64(&f.leaderSeenTicks, 0)
 		f.becomeCandidate()
 	}

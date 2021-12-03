@@ -151,15 +151,6 @@ func (node *RaftNode) becomeLeader() *RaftNode {
 	node.appendAndCastCommand(NOOPCommand)
 	node.abortProxyReqs()
 
-	for _, queuedReq := range node.queuedReqs {
-		node.Step(&Message{
-			from:  queuedReq.from,
-			to:    &AddrLocal{},
-			term:  0,
-			event: queuedReq.event,
-		})
-	}
-
 	logger.Info("node:%v become leader", node)
 	return node
 }
@@ -271,11 +262,42 @@ func (node *RaftNode) Tick() {
 }
 
 func (node *RaftNode) validateMsg(msg *Message) bool {
+	switch msg.from.(type) {
+	case *AddrPeers, *AddrLocal:
+		logger.Error("node:%v msg:%v from addr invalid", node, msg)
+		return false
+	case *AddrClient:
+		switch msg.event.(type) {
+		case *EventClientReq:
+		default:
+			logger.Error("node:%v msg:%v from client invalid event", node, msg)
+			return false
+		}
+	}
+
 	if msg.term < node.term {
+		switch msg.event.(type) {
+		case *EventClientReq, *EventClientResp:
+		default:
+			logger.Debug("node:%v msg:%v invalid event", node, msg)
+			return false
+		}
+	}
+
+	// check msg.to
+	switch to := msg.to.(type) {
+	case *AddrPeer:
+		if to.peer == node.id {
+			return true
+		} else {
+			logger.Error("node:%v,msg:%v to peer id is invalid", node, msg)
+			return false
+		}
+	case *AddrLocal, *AddrPeers:
+		return true
+	case *AddrClient:
 		return false
 	}
 
-	//TODO:
-
-	return true
+	return false
 }

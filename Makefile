@@ -3,7 +3,7 @@
 #
 #
 
-LogLevel := Info 
+LogLevel := Detail
 
 BUILD_TARGETS := build/toy-raft
 

@@ -13,7 +13,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&TestLogLevel, "LogLevel", "Info", "test log level")
+	flag.StringVar(&TestLogLevel, "LogLevel", "Debug", "test log level")
 	//flag.Parse()
 }
 

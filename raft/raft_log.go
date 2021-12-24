@@ -1,10 +1,6 @@
 // raft_log.go
 package raft
 
-import (
-	"sync"
-)
-
 //LogMetaKey log meta key
 type LogMetaKey uint32
 
@@ -13,18 +9,31 @@ const (
 	MetaKeyAppliedIndex
 )
 
+type LogScanRange struct {
+	start []byte
+	end   []byte
+}
+
+type LogIter struct {
+}
+
 //LogStore log store interface
 //  |        store         |
 //  | ---------------|-----|
 //                   ^
 //                applied
 type LogStore interface {
-	Append([]Entry)                            // append entries to store
-	Get(index uint64) *Entry                   //
-	AppliedIndex() uint64                      // get applied entry index from store
-	LastIndexTerm() (index, term uint64)       //
-	StoreMetaData(key LogMetaKey, data []byte) //
-	LoadMetaData(key LogMetaKey) []byte        //
+	Append(*Entry) uint64                // append entries to store
+	Commit(index uint64)                 // commit log entry up to index
+	Committed() uint64                   //
+	Get(index uint64) *Entry             //
+	Truncate(index uint64) uint64        //
+	GetMetaData(key []byte) []byte       //
+	SetMetaData(key []byte, data []byte) //
+	IsEmpty() bool                       //
+	Size() uint64                        //
+	Len() uint64                         //
+	Scan(start, stop []byte) LogIter     //
 }
 
 //RaftLog raft log
@@ -34,51 +43,39 @@ type LogStore interface {
 //             ^           ^          ^
 //           applied    committed    last
 type RaftLog struct {
-	sync.RWMutex
-	appliedIndex uint64
-	uncommit     uint64 // uncommit offset in entries
-	entries      []Entry
-	logStore     LogStore
+	store       LogStore
+	lastIndex   uint64
+	lastTerm    uint64
+	commitIndex uint64
+	commitTerm  uint64
 }
 
 func NewRaftLog(store LogStore) *RaftLog {
+	var (
+		commitIndex uint64
+		commitTerm  uint64
+		lastIndex   uint64
+		lastTerm    uint64
+	)
+	index := store.Committed()
+	if index > 0 {
+		e := store.Get(index)
+		commitIndex = e.index
+		commitTerm = e.term
+	}
+	if l := store.Len(); l > 0 {
+		e := store.Get(l - 1)
+		lastIndex = e.index
+		lastTerm = e.term
+	}
+
 	return &RaftLog{
-		appliedIndex: store.AppliedIndex(),
-		uncommit:     0,
-		entries:      make([]Entry, 4096),
-		logStore:     store,
+		commitIndex: commitIndex,
+		commitTerm:  commitTerm,
+		lastIndex:   lastIndex,
+		lastTerm:    lastTerm,
+		store:       store,
 	}
-}
-
-func (log *RaftLog) LastIndexTerm() (index uint64, term uint64) {
-	l := len(log.entries)
-	if l > 0 {
-		last := log.entries[l-1]
-		index = last.index
-		term = last.term
-		return
-	}
-
-	return log.logStore.LastIndexTerm()
-}
-
-func (log *RaftLog) CommittedIndexTerm() (index uint64, term uint64) {
-	log.RLock()
-	if log.uncommit > 0 {
-		last := log.entries[log.uncommit-1]
-		index = last.index
-		term = last.term
-		log.RUnlock()
-		return
-	}
-	log.RUnlock()
-
-	return log.logStore.LastIndexTerm()
-}
-
-func (log *RaftLog) CommittedIndex() uint64 {
-	index, _ := log.CommittedIndexTerm()
-	return index
 }
 
 //LoadTerm load term, leader from meta
@@ -92,26 +89,13 @@ func (log *RaftLog) SaveTerm(term uint64, leader uint64) {
 }
 
 func (log *RaftLog) Get(index uint64) *Entry {
-	log.RLock()
-	defer log.RUnlock()
-
-	if index < log.appliedIndex {
-		return log.logStore.Get(index)
-	}
-
-	for _, entry := range log.entries {
-		if entry.index == index {
-			return &entry
-		}
-	}
-
-	return nil
+	return log.store.Get(index)
 }
 
 //Has has entry with index, term in raftlog
 func (log *RaftLog) Has(index, term uint64) bool {
 	entry := log.Get(index)
-	if entry == nil && entry.term == term {
+	if entry != nil && entry.term == term {
 		return true
 	}
 
@@ -119,54 +103,53 @@ func (log *RaftLog) Has(index, term uint64) bool {
 }
 
 // append command to raft log
-func (log *RaftLog) Append(term uint64, command []byte) Entry {
-	log.Lock()
-	defer log.Unlock()
-	lastIndex, _ := log.LastIndexTerm()
-	entry := Entry{
-		index:   lastIndex + 1,
+func (log *RaftLog) Append(term uint64, command []byte) *Entry {
+	entry := &Entry{
+		index:   log.lastIndex + 1,
 		term:    term,
 		command: command,
 	}
-	log.entries = append(log.entries, entry)
+	log.store.Append(entry)
+	log.lastIndex = entry.index
+	log.lastTerm = entry.term
 
 	return entry
 }
 
 // commit entries which < index
 func (log *RaftLog) Commit(index uint64) {
-	committedIndex, _ := log.CommittedIndexTerm()
-	if index <= committedIndex {
-		//TODO: error
+	entry := log.Get(index)
+	if entry == nil {
+		logger.Warn("log:%v commit index entry is nil", log)
 		return
 	}
-
-	log.Lock()
-	defer log.Unlock()
-	commitEntries := make([]Entry, 0)
-	uncommit := log.uncommit
-	for _, entry := range log.entries[log.uncommit:] {
-		if entry.index < index {
-			uncommit += 1
-			commitEntries = append(commitEntries, entry)
-		}
-	}
-	log.logStore.Append(commitEntries)
-	log.uncommit = uncommit
+	log.store.Commit(index)
+	log.commitIndex = entry.index
+	log.commitTerm = entry.term
 }
 
 //
-func (log *RaftLog) Apply(index uint64) {
-	log.Lock()
-	defer log.Unlock()
-	applying := uint64(0)
-	for _, entry := range log.entries[:log.uncommit] {
-		if entry.index <= index {
-			applying += 1
-		}
-	}
-	log.uncommit -= applying
-	log.entries = log.entries[applying+1:]
 
-	//log.store.SaveMetaData()
+//Splice:
+func (log *RaftLog) Splice(entries []Entry) (uint64, error) {
+
+	return 0, nil
+}
+
+func (log *RaftLog) Truncate(index uint64) uint64 {
+	var (
+		truncateIndex uint64
+		truncateTerm  uint64
+	)
+	i := log.store.Truncate(index)
+	if i > 0 {
+		e := log.store.Get(i)
+		truncateIndex = e.index
+		truncateTerm = e.term
+	}
+
+	log.lastIndex = truncateIndex
+	log.lastTerm = truncateTerm
+
+	return index
 }

@@ -60,7 +60,7 @@ func (node *RaftNode) becomeRole(roleType RoleType) {
 		return
 	}
 
-	logger.Info("node:%v become role %v\n", node, roleType)
+	logger.Info("node:%v change role: %v -> %v", node, node.role.Type(), roleType)
 
 	switch roleType {
 	case RoleCandidate:
@@ -81,11 +81,11 @@ func (node *RaftNode) becomeCandidate() {
 		return
 	}
 
+	node.becomeRole(RoleCandidate)
+
 	node.term++
 	node.log.SaveTerm(node.term, 0)
-
 	lastIndex, lastTerm := node.log.LastIndexTerm()
-	node.becomeRole(RoleCandidate)
 
 	node.send(node.AddrPeers(), &EventSolicitVoteReq{lastIndex, lastTerm})
 }
@@ -138,7 +138,7 @@ func (node *RaftNode) becomeLeader() *RaftNode {
 		return node
 	}
 
-	logger.Debug("node:%v will change %v -> Leader", node, node.role.Type())
+	logger.Detail("node:%v will change %v -> Leader", node, node.role.Type())
 	node.becomeRole(RoleLeader)
 
 	committedIndex, committedTerm := node.log.CommittedIndexTerm()
@@ -224,6 +224,7 @@ func (node *RaftNode) send(to Address, event MsgEvent) {
 		event: event,
 	}
 	node.msgC <- msg
+	logger.Detail("node:%v send msg:%v", node, msg)
 }
 
 //Step step rsm by msg
@@ -233,7 +234,7 @@ func (node *RaftNode) Step(msg *Message) {
 		return
 	}
 
-	logger.Debug("node:%v,step msg:%v", node, msg)
+	logger.Detail("node:%v,step msg:%v", node, msg)
 
 	// msg from peer which term > self
 	switch from := msg.from.(type) {

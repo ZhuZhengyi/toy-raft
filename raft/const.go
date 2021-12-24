@@ -10,6 +10,7 @@ const (
 
 const (
 	TICK_INTERVAL_MS                = 500 * time.Millisecond
+	HB_LEADER_TIMEOUT               = 3
 	HB_TICK_MIN                     = 8
 	HB_TICK_MAX                     = 15
 	ELECT_TICK_MIN                  = 8

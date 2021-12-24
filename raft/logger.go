@@ -21,8 +21,8 @@ type Logger interface {
 type LogLevel int
 
 const (
-	LogLevelDebug LogLevel = iota
-	LogLevelDetail
+	LogLevelDetail LogLevel = iota
+	LogLevelDebug
 	LogLevelInfo
 	LogLevelWarn
 	LogLevelError

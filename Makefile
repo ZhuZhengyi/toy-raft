@@ -1,9 +1,7 @@
 # Makefile
 #
-#
-#
 
-LogLevel := Detail
+LogLevel := Debug
 
 BUILD_TARGETS := build/toy-raft
 

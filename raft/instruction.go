@@ -40,7 +40,7 @@ type InstApply struct {
 }
 
 type InstNotify struct {
-	id    uint64
+	id    ReqId
 	index uint64
 	addr  Address
 }

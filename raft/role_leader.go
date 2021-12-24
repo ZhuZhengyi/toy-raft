@@ -13,7 +13,7 @@ func NewLeader(node *RaftNode) *Leader {
 	l := &Leader{
 		RaftNode:         node,
 		heartbeatTicks:   0,
-		heartbeatTimeOut: 1,
+		heartbeatTimeOut: HB_LEADER_TIMEOUT,
 		peerNextIndex:    make(map[uint64]uint64),
 		peerLastIndex:    make(map[uint64]uint64),
 	}
@@ -37,7 +37,7 @@ func (l *Leader) Type() RoleType {
 
 //Step step rsm by msg
 func (l *Leader) Step(msg *Message) {
-	logger.Debug("leader:%v,step msg:%v", l, msg)
+	logger.Detail("leader:%v,step msg:%v", l, msg)
 	switch event := msg.event.(type) {
 	case *EventHeartbeatResp:
 		switch from := msg.from.(type) {
@@ -84,10 +84,17 @@ func (l *Leader) Step(msg *Message) {
 				})
 			}
 		case *ReqMutate:
+			index := l.append(req.mutate)
+			l.instC <- &InstNotify{id: event.id, addr: msg.from, index: index}
+			if len(l.peers) == 0 {
+				l.commit()
+			}
 		case *ReqStatus:
 		default:
 		}
 	case *EventClientResp:
+		//TODO:
+		l.send(&AddrClient{}, event)
 	case *EventSolicitVoteReq, *EventGrantVoteResp:
 		logger.Warn("leader:%v ignore msg(%v)\n", l, msg)
 	case *EventHeartbeatReq, *EventAppendEntriesReq:
@@ -99,11 +106,11 @@ func (l *Leader) Step(msg *Message) {
 
 //Tick tick leader
 func (l *Leader) Tick() {
-	logger.Debug("leader:%v tick", l)
+	logger.Detail("leader:%v tick", l)
 	if len(l.peers) > 0 {
 		l.heartbeatTicks += 1
 		if l.heartbeatTicks >= l.heartbeatTimeOut {
-			logger.Debug("leader:%v hbtick timeout", l)
+			logger.Detail("leader:%v hbtick timeout", l)
 			l.heartbeatTicks = 0
 			commitIndex, commitTerm := l.log.CommittedIndexTerm()
 			l.send(AddressPeers, &EventHeartbeatReq{commitIndex, commitTerm})
@@ -114,12 +121,23 @@ func (l *Leader) Tick() {
 /// replicate logs to peer
 func (l *Leader) replicate(peer uint64) {
 	//TODO: replicate logs to peer
-	logger.Debug("leader:%v replicate log to peer:%v", l, peer)
+	logger.Detail("leader:%v replicate log to peer:%v", l, peer)
 
 }
 
 /// Commits pending log entries
 func (l *Leader) commit() {
-	logger.Debug("leader:%v commit pending entries", l)
+	logger.Detail("leader:%v commit pending entries", l)
 	//TODO
+}
+
+// append entry to log and replicate to peers
+func (l *Leader) append(command []byte) uint64 {
+	logger.Detail("leader:%v append command to log", l)
+	entry := l.log.Append(l.term, command)
+	for _, peer := range l.peers {
+		l.replicate(peer)
+	}
+
+	return entry.index
 }

@@ -24,7 +24,7 @@ func (r *raft) runPeerMsgIn(ctx context.Context) {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", r.config.PeerTcpPort))
 	if err != nil {
-		logger.Fatal("listen tcp %v", r.config.PeerTcpPort)
+		logger.Fatal("raft:%v listen tcp %v", r, r.config.PeerTcpPort)
 		return
 	}
 	r.peerListener = listener
@@ -35,7 +35,7 @@ func (r *raft) runPeerMsgIn(ctx context.Context) {
 	for {
 		conn, err2 := r.peerListener.Accept()
 		if err2 != nil {
-			logger.Warn("r:%v listen tcp:%v, error:%v\n", r, r.peerListener.Addr(), err2)
+			logger.Warn("raft:%v listen tcp:%v, error:%v\n", r, r.peerListener.Addr(), err2)
 			return
 		}
 
@@ -121,7 +121,7 @@ func (r *raft) sendMsgToPeer(msg *Message) {
 		return
 	} else {
 		msg.SendTo(session)
-		logger.Debug("raft:%v send msg:%v", r, msg)
+		logger.Detail("raft:%v send msg:%v", r, msg)
 	}
 }
 
@@ -130,7 +130,7 @@ func (r *raft) recvMsgFromPeer(ctx context.Context, conn net.Conn) *Message {
 	msg := new(Message)
 	msg.RecvFrom(conn)
 
-	logger.Debug("raft:%v recv msg %v", r, msg)
+	logger.Detail("raft:%v recv msg:%v", r, msg)
 
 	return msg
 }

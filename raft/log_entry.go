@@ -30,18 +30,17 @@ func (e *Entry) Marshal() []byte {
 	return buffer.Bytes()
 }
 
-func (e *Entry) Unmarshal(data []byte) {
-	buffer := bytes.NewBuffer(data)
-
-	if err := binary.Read(buffer, binary.BigEndian, &e.index); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
+func (e *Entry) Unmarshal(data []byte) error {
+	if len(data) < 16 {
+		logger.Warn("entry:%v unmarshal error, data len < 16", e)
+		return nil
 	}
-	if err := binary.Read(buffer, binary.BigEndian, &e.term); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
+	e.index = binary.BigEndian.Uint64(data[0:8])
+	e.term = binary.BigEndian.Uint64(data[8:16])
+	if len(data) > 16 {
+		copy(e.command, data[16:])
 	}
-	if err := binary.Read(buffer, binary.BigEndian, &e.command); err != nil {
-		logger.Warn("unmarshal %v error: %v", e, err)
-	}
+	return nil
 }
 
 type Entries []Entry

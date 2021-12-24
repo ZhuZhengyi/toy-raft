@@ -151,8 +151,9 @@ func (r *raft) popClientSession(id ReqId) (s Session) {
 
 //
 func (r *raft) replyToClient(resp *EventClientResp) {
-	s := r.popClientSession(resp.id)
-	s.Reply(resp.response)
+	if s, ok := r.reqSessions[resp.id]; ok {
+		s.Reply(resp.response)
+	}
 }
 
 func (r *raft) makeClientMsg(req Request, session Session) (msg *Message) {

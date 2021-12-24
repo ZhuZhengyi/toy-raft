@@ -11,9 +11,13 @@ var (
 	ErrNoEntry = errors.New("no entry exist")
 )
 
-type memLogStore struct {
+type SyncEntries struct {
 	sync.RWMutex
-	entries      []Entry
+	entries []Entry
+}
+
+type memLogStore struct {
+	se           SyncEntries
 	metaMutex    sync.RWMutex
 	appliedIndex uint64
 	metaData     map[LogMetaKey][]byte
@@ -25,7 +29,7 @@ var (
 
 func NewMemLogStore() *memLogStore {
 	return &memLogStore{
-		entries:  make([]Entry, 0),
+		se:       SyncEntries{entries: make([]Entry, 4096)},
 		metaData: make(map[LogMetaKey][]byte),
 	}
 }

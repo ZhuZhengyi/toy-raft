@@ -85,15 +85,28 @@ func (f *Follower) Step(msg *Message) {
 			logger.Detail("Follower:%v, vote for:%v", f, f.votedFor)
 		}
 	case *EventAppendEntriesReq:
-		//TODO:
+		if f.isFromLeader(msg.from) {
+			if event.baseIndex > 0 && !f.log.Has(event.baseIndex, event.baseTerm) {
+				f.send(msg.from, &EventRefuseEntriesResp{})
+			} else {
+				lastIndex, _ := f.log.Splice(event.entries)
+				f.send(msg.from, &EventAcceptEntriesResp{lastIndex})
+			}
+		}
 	case *EventClientReq:
-		//TODO:
+		if f.isNoLeader() {
+			f.queuedReqs = append(f.queuedReqs, queuedEvent{from: msg.from, event: event})
+		} else {
+			f.proxyReqs[event.id] = msg.from
+			f.send(&AddrPeer{f.leader}, event)
+		}
 	case *EventClientResp:
-		//TODO:
+		delete(f.proxyReqs, event.id)
+		f.send(&AddrClient{}, event)
 	case *EventGrantVoteResp:
-		//TODO:
+		logger.Warn("Follower:%v received unexpected message(%v)\n", f, msg)
 	default:
-		logger.Warn("node:%v received unexpected message(%v)\n", f, msg)
+		logger.Warn("Follower:%v received unexpected message(%v)\n", f, msg)
 	}
 }
 
@@ -117,4 +130,8 @@ func (f *Follower) isFromLeader(addr Address) bool {
 	}
 
 	return false
+}
+
+func (f *Follower) isNoLeader() bool {
+	return f.leader == 0
 }

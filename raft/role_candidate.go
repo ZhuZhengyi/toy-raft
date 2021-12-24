@@ -52,7 +52,7 @@ func (c *Candidate) Step(msg *Message) {
 	case *EventGrantVoteResp:
 		c.votedCount++
 		if c.votedCount >= c.quorum() {
-			logger.Detail("candidate:%v get quorum vote:%v(%v)", c, c.votedCount, c.quorum())
+			logger.Debug("candidate:%v get quorum vote:%v(%v)", c, c.votedCount, c.quorum())
 			c.becomeLeader()
 		}
 	case *EventClientReq:

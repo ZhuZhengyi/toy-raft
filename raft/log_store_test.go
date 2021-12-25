@@ -17,7 +17,7 @@ func TestMemLog(t *testing.T) {
 		{7, 5, command},
 	}
 
-	l.Append(entries)
+	l.Append(entries...)
 
 	for i, e := range entries {
 		el := l.Get(uint64(i + 1))

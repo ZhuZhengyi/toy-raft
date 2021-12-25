@@ -17,14 +17,14 @@ type SyncEntries struct {
 }
 
 type memLogStore struct {
+	appliedIndex uint64
 	se           SyncEntries
 	metaMutex    sync.RWMutex
-	appliedIndex uint64
 	metaData     map[LogMetaKey][]byte
 }
 
 var (
-	_ (LogStore) = new(memLogStore)
+	_ LogStore = (*memLogStore)(nil)
 )
 
 func NewMemLogStore() *memLogStore {
@@ -34,10 +34,11 @@ func NewMemLogStore() *memLogStore {
 	}
 }
 
-func (log *memLogStore) Append(entries []Entry) {
-	log.Lock()
-	log.entries = append(log.entries, entries...)
-	log.Unlock()
+func (log *memLogStore) Append(entries ...Entry) uint64 {
+	log.se.Lock()
+	log.se.entries = append(log.se.entries, entries...)
+	log.se.Unlock()
+	return 0
 }
 
 func (log *memLogStore) AppliedIndex() uint64 {
@@ -45,9 +46,9 @@ func (log *memLogStore) AppliedIndex() uint64 {
 }
 
 func (log *memLogStore) Get(index uint64) *Entry {
-	log.RLock()
-	defer log.RUnlock()
-	for _, e := range log.entries {
+	log.se.RLock()
+	defer log.se.RUnlock()
+	for _, e := range log.se.entries {
 		if e.index == index {
 			return &e
 		}
@@ -56,13 +57,13 @@ func (log *memLogStore) Get(index uint64) *Entry {
 }
 
 func (log *memLogStore) LastIndexTerm() (index, term uint64) {
-	log.RLock()
-	defer log.RUnlock()
-	l := len(log.entries)
+	log.se.RLock()
+	defer log.se.RUnlock()
+	l := len(log.se.entries)
 	if l == 0 {
 		return 0, 0
 	}
-	lastEntry := log.entries[l-1]
+	lastEntry := log.se.entries[l-1]
 	return lastEntry.index, lastEntry.term
 }
 
@@ -78,4 +79,41 @@ func (log *memLogStore) LoadMetaData(key LogMetaKey) []byte {
 	log.metaMutex.RUnlock()
 
 	return data
+}
+
+func (log *memLogStore) Commit(index uint64) {
+}
+
+func (log *memLogStore) Committed() uint64 {
+	return 0
+}
+
+func (log *memLogStore) Truncate(index uint64) uint64 {
+	return 0
+}
+
+func (log *memLogStore) IsEmpty() bool {
+	return true
+}
+
+func (log *memLogStore) Size() uint64 {
+	return 0
+}
+
+func (log *memLogStore) Len() uint64 {
+	return 0
+}
+
+func (log *memLogStore) Scan(start, stop []byte) LogIter {
+
+	return nil
+}
+
+func (log *memLogStore) GetMetaData(key LogMetaKey) []byte {
+
+	return nil
+}
+
+func (log *memLogStore) SetMetaData(key LogMetaKey, data []byte) {
+	//
 }

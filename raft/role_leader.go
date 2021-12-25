@@ -77,10 +77,9 @@ func (l *Leader) Step(msg *Message) {
 			instVote := &InstVote{term: l.term}
 			l.instC <- instVote
 			if len(l.peers) > 0 {
-				index, term := l.log.CommittedIndexTerm()
 				l.send(&AddrPeers{peers: l.peers}, &EventHeartbeatReq{
-					commitIndex: index,
-					commitTerm:  term,
+					commitIndex: l.log.commitIndex,
+					commitTerm:  l.log.commitTerm,
 				})
 			}
 		case *ReqMutate:
@@ -112,8 +111,7 @@ func (l *Leader) Tick() {
 		if l.heartbeatTicks >= l.heartbeatTimeOut {
 			logger.Detail("leader:%v hbtick timeout", l)
 			l.heartbeatTicks = 0
-			commitIndex, commitTerm := l.log.CommittedIndexTerm()
-			l.send(AddressPeers, &EventHeartbeatReq{commitIndex, commitTerm})
+			l.send(AddressPeers, &EventHeartbeatReq{l.log.commitIndex, l.log.commitTerm})
 		}
 	}
 }

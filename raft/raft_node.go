@@ -85,9 +85,8 @@ func (node *RaftNode) becomeCandidate() {
 
 	node.term++
 	node.log.SaveTerm(node.term, 0)
-	lastIndex, lastTerm := node.log.LastIndexTerm()
 
-	node.send(node.AddrPeers(), &EventSolicitVoteReq{lastIndex, lastTerm})
+	node.send(node.AddrPeers(), &EventSolicitVoteReq{node.log.lastIndex, node.log.lastTerm})
 }
 
 func (node *RaftNode) AddrPeers() *AddrPeers {
@@ -100,6 +99,8 @@ func (node *RaftNode) becomeFollower(term uint64, leader uint64) *RaftNode {
 		logger.Error("node:%v becomeFollower err, term: %v, leader: %v\n", node, term, leader)
 		return node
 	}
+
+	logger.Debug("node:%v becomeFollower term: %v, leader: %v\n", node, term, leader)
 
 	switch r := node.role.(type) {
 	case *Follower:
@@ -141,17 +142,16 @@ func (node *RaftNode) becomeLeader() *RaftNode {
 	logger.Detail("node:%v will change %v -> Leader", node, node.role.Type())
 	node.becomeRole(RoleLeader)
 
-	committedIndex, committedTerm := node.log.CommittedIndexTerm()
 	heartbeatEvent := &EventHeartbeatReq{
-		commitIndex: committedIndex,
-		commitTerm:  committedTerm,
+		commitIndex: node.log.commitIndex,
+		commitTerm:  node.log.commitTerm,
 	}
 	node.send(&AddrPeers{peers: node.peers}, heartbeatEvent)
 
 	node.appendAndCastCommand(NOOPCommand)
 	node.abortProxyReqs()
 
-	logger.Info("node:%v become leader", node)
+	logger.Info("node:%v Leader:[term:%v,leader:%v]", node, node.term, node.id)
 	return node
 }
 
@@ -160,7 +160,7 @@ func (node *RaftNode) appendAndCastCommand(command []byte) {
 	entry := node.log.Append(node.term, command)
 
 	for _, p := range node.peers {
-		node.replicate(p, entry)
+		node.replicate(p, *entry)
 	}
 }
 
@@ -205,9 +205,8 @@ func (node *RaftNode) forwardToLeaderQueued(leader Address) {
 
 // send a appendEntry
 func (node *RaftNode) replicate(peer uint64, entry ...Entry) {
-	index, _ := node.log.LastIndexTerm()
 	appendEntriesEvent := &EventAppendEntriesReq{
-		baseIndex: index,
+		baseIndex: node.log.lastIndex,
 		baseTerm:  node.term,
 		entries:   make([]Entry, 0),
 	}
@@ -240,7 +239,7 @@ func (node *RaftNode) Step(msg *Message) {
 	switch from := msg.from.(type) {
 	case *AddrPeer:
 		if msg.term > node.term || node.isFollowerNoLeader() {
-			logger.Debug("node:%v,msg:%v term is bigger", node, msg)
+			logger.Debug("node:%v -> follower, msg:%v term is bigger", node, msg)
 			node.becomeFollower(msg.term, from.peer)
 		}
 	default:

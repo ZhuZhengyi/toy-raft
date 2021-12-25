@@ -46,13 +46,14 @@ func (c *Candidate) Step(msg *Message) {
 	case *EventHeartbeatReq:
 		switch from := msg.from.(type) {
 		case *AddrPeer:
+			logger.Debug("candidate:%v -> follower, cause: msg:%v", c, msg)
 			c.RaftNode.becomeFollower(msg.term, from.peer).Step(msg)
 		default:
 		}
 	case *EventGrantVoteResp:
 		c.votedCount++
 		if c.votedCount >= c.quorum() {
-			logger.Debug("candidate:%v get quorum vote:%v(%v)", c, c.votedCount, c.quorum())
+			logger.Debug("candidate:%v -> leader, cause:quorum vote:%v(%v)", c, c.votedCount, c.quorum())
 			c.becomeLeader()
 		}
 	case *EventClientReq:

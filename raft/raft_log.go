@@ -14,7 +14,8 @@ type LogScanRange struct {
 	end   []byte
 }
 
-type LogIter struct {
+type LogIter interface {
+	Next()
 }
 
 //LogStore log store interface
@@ -23,17 +24,17 @@ type LogIter struct {
 //                   ^
 //                applied
 type LogStore interface {
-	Append(*Entry) uint64                // append entries to store
-	Commit(index uint64)                 // commit log entry up to index
-	Committed() uint64                   //
-	Get(index uint64) *Entry             //
-	Truncate(index uint64) uint64        //
-	GetMetaData(key []byte) []byte       //
-	SetMetaData(key []byte, data []byte) //
-	IsEmpty() bool                       //
-	Size() uint64                        //
-	Len() uint64                         //
-	Scan(start, stop []byte) LogIter     //
+	Append(entries ...Entry) uint64          // append entries to store
+	Commit(index uint64)                     // commit log entry up to index
+	Committed() uint64                       //
+	Get(index uint64) *Entry                 //
+	Truncate(index uint64) uint64            //
+	GetMetaData(key LogMetaKey) []byte       //
+	SetMetaData(key LogMetaKey, data []byte) //
+	IsEmpty() bool                           //
+	Size() uint64                            //
+	Len() uint64                             //
+	Scan(start, stop []byte) LogIter         //
 }
 
 //RaftLog raft log
@@ -104,7 +105,7 @@ func (log *RaftLog) Has(index, term uint64) bool {
 
 // append command to raft log
 func (log *RaftLog) Append(term uint64, command []byte) *Entry {
-	entry := &Entry{
+	entry := Entry{
 		index:   log.lastIndex + 1,
 		term:    term,
 		command: command,
@@ -113,7 +114,7 @@ func (log *RaftLog) Append(term uint64, command []byte) *Entry {
 	log.lastIndex = entry.index
 	log.lastTerm = entry.term
 
-	return entry
+	return &entry
 }
 
 // commit entries which < index
@@ -152,4 +153,24 @@ func (log *RaftLog) Truncate(index uint64) uint64 {
 	log.lastTerm = truncateTerm
 
 	return index
+}
+
+func (log *RaftLog) LastIndex() uint64 {
+	return log.lastIndex
+}
+
+func (log *RaftLog) LastTerm() uint64 {
+	return log.lastTerm
+}
+
+func (log *RaftLog) LastIndexTerm() (uint64, uint64) {
+	return log.lastIndex, log.lastTerm
+}
+
+func (log *RaftLog) CommittedIndex() uint64 {
+	return log.commitIndex
+}
+
+func (log *RaftLog) CommittedTerm() uint64 {
+	return log.commitTerm
 }
